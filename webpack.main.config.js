@@ -1,14 +1,16 @@
+const path = require("path");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
+
 module.exports = {
   /**
    * This is the main entry point for your application, it's the first file
    * that runs in the main process.
    */
-  entry: './src/main.js',
+  entry: "./src/main.js",
   // Put your normal webpack config below here
   module: {
-    rules: require('./webpack.rules'),
+    rules: require("./webpack.rules"),
   },
-  // target: 'electron-renderer',
   resolve: {
     extensions: [
       ".js",
@@ -20,5 +22,15 @@ module.exports = {
       ".scss",
       ".sass",
     ],
-  }
+  },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.join(__dirname, "src", "loader.html"),
+          to: ".",
+        },
+      ],
+    }),
+  ],
 };

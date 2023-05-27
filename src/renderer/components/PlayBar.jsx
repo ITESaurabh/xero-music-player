@@ -75,7 +75,7 @@ export default function PlayBar() {
                   <CoverImage>
                      <img
                         alt="can't win - Chilling Sunday"
-                        src="https://source.unsplash.com/random/500x500"
+                        src="https://source.unsplash.com/featured/500x500"
                      />
                   </CoverImage>
                </Hidden>
@@ -207,7 +207,11 @@ export default function PlayBar() {
                   <RepeatRounded />
                </IconButton>
                <IconButton
-                  onClick={() => sendMessageToNode('show-file-picker', { title: 'add-to-playlist' })}
+                  onClick={() =>
+                     sendMessageToNode('show-file-picker', {
+                        title: 'add-to-playlist',
+                     })
+                  }
                   aria-label="discord visibility"
                >
                   <DiscordIcon style={{ width: 25, height: 25 }} />

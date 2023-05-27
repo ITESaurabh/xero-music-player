@@ -1,12 +1,13 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import { HashRouter } from 'react-router-dom';
-import App from './App.jsx'
-import "./renderer/styles/core.scss"
-import { StateProvider } from './renderer/utils/store.js';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { HashRouter } from "react-router-dom";
+import App from "./App.jsx";
+import "./renderer/styles/core.scss";
+import { StateProvider } from "./renderer/utils/store.js";
 
+const root = ReactDOM.createRoot(document.getElementById("app"));
 function render() {
-  ReactDOM.render(
+  root.render(
     <React.StrictMode>
       <StateProvider>
         <HashRouter>
@@ -14,7 +15,7 @@ function render() {
         </HashRouter>
       </StateProvider>
     </React.StrictMode>
-    , document.getElementById('app'));
+  );
 }
 
 render();
