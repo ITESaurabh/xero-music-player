@@ -1,42 +1,42 @@
 module.exports = {
   packagerConfig: {
-    icon: "./src/xeroLogo256.ico",
+    icon: './src/assets/logo/XeroTunesLogo',
   },
   rebuildConfig: {},
   makers: [
     {
-      name: "@electron-forge/maker-squirrel",
+      name: '@electron-forge/maker-squirrel',
       config: {
         // name: "xero_player",
-        icon: "./src/xeroLogo256.ico",
+        icon: './src/assets/logo/XeroTunesLogo.ico',
       },
     },
     {
-      name: "@electron-forge/maker-zip",
-      platforms: ["darwin"],
+      name: '@electron-forge/maker-zip',
+      platforms: ['darwin'],
     },
     {
-      name: "@electron-forge/maker-deb",
+      name: '@electron-forge/maker-deb',
       config: {},
     },
     {
-      name: "@electron-forge/maker-rpm",
+      name: '@electron-forge/maker-rpm',
       config: {},
     },
   ],
   plugins: [
     {
-      name: "@electron-forge/plugin-webpack",
+      name: '@electron-forge/plugin-webpack',
       config: {
-        mainConfig: "./webpack.main.config.js",
+        mainConfig: './webpack.main.config.js',
         devContentSecurityPolicy: "'unsafe-eval'",
         renderer: {
-          config: "./webpack.renderer.config.js",
+          config: './webpack.renderer.config.js',
           entryPoints: [
             {
-              html: "./src/index.html",
-              js: "./src/renderer.js",
-              name: "main_window",
+              html: './src/index.html',
+              js: './src/renderer.js',
+              name: 'main_window',
               // preload: {
               //   js: "./src/preload.js",
               // },

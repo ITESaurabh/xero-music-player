@@ -1,20 +1,15 @@
-const {
-  app,
-  BrowserWindow,
-  ipcMain,
-  Notification,
-  screen,
-  dialog,
-} = require("electron");
-const path = require("path");
-const { default: mainIpcs } = require("./main/utils/mainProcess");
+const { app, BrowserWindow, ipcMain, Notification, screen, dialog } = require('electron');
+const path = require('path');
+const { default: mainIpcs } = require('./main/utils/mainProcess');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require("electron-squirrel-startup")) {
+if (require('electron-squirrel-startup')) {
   // eslint-disable-line global-require
   app.quit();
 }
 let isSingleInstance = app.requestSingleInstanceLock();
+app.commandLine.appendSwitch('high-dpi-support', 1);
+app.commandLine.appendSwitch('force-device-scale-factor', 1);
 if (!isSingleInstance) {
   app.quit();
 }
@@ -34,24 +29,30 @@ const createWindow = () => {
     frame: false,
     width: 400,
     height: 250,
-    backgroundColor: "#050407",
+    backgroundColor: '#050407',
     darkTheme: true,
     resizable: false,
     webPreferences: {
-      webSecurity: process.env.NODE_ENV !== "development",
+      webSecurity: process.env.NODE_ENV !== 'development',
+      enableRemoteModule: true,
     },
+    // icon: './assets/logo/XeroTunesLogo.png',
   });
   // console.log("DOIR", __dirname);
-  loading.loadFile(path.join(__dirname, "loader.html"));
+  loading.loadFile(path.join(__dirname, 'loader.html'));
+  const arg1 = process.argv[1];
+  if (arg1) {
+    dialog.showErrorBox('ARGS', `${arg1}`);
+  }
 
-  loading.once("ready-to-show", () => {
+  loading.once('ready-to-show', () => {
     loading.show();
   });
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
 
-  loading.once("show", () => {
+  loading.once('show', () => {
     mainWin = new BrowserWindow({
       minWidth: 400,
       minHeight: 400,
@@ -67,19 +68,20 @@ const createWindow = () => {
         y: 13,
       },
       frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
-      titleBarStyle: "hidden",
+      titleBarStyle: 'hidden',
       titleBarOverlay: {
-        color: "#131313",
-        symbolColor: "#ffffff",
+        color: '#131313',
+        symbolColor: '#ffffff',
       },
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        webSecurity: process.env.NODE_ENV !== "development",
+        webSecurity: process.env.NODE_ENV !== 'development',
+        enableRemoteModule: true,
       },
     });
-    mainWin.webContents.once("dom-ready", () => {
-      console.log("mainWin loaded");
+    mainWin.webContents.once('dom-ready', () => {
+      console.log('mainWin loaded');
       console.log(process.env.NODE_ENV);
       mainWin.show();
       loading.hide();
@@ -96,18 +98,18 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser mainWindowdows.
 // Some APIs can only be used after this event occurs.
-app.on("ready", createWindow);
+app.on('ready', createWindow);
 
 // Quit when all mainWindowdows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on("mainWindowdow-all-closed", () => {
-  if (process.platform !== "darmainWindow") {
+app.on('mainWindowdow-all-closed', () => {
+  if (process.platform !== 'darmainWindow') {
     app.quit();
   }
 });
 
-app.on("activate", () => {
+app.on('activate', () => {
   // On OS X it's common to re-create a mainWindowdow in the app when the
   // dock icon is clicked and there are no other mainWindowdows open.
   if (BrowserWindow.getAllWindows().length === 0) {

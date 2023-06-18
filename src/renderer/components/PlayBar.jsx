@@ -200,10 +200,24 @@ export default function PlayBar() {
          </Grid>
          <Grid item xs={1} direction="row">
             <Box m={2}>
-               <IconButton aria-label="shuffle">
+               <IconButton
+                  onClick={() =>
+                     sendMessageToNode('open-dir', {
+                        path: '%appdata%',
+                     })
+                  }
+                  aria-label="shuffle"
+               >
                   <ShuffleRounded />
                </IconButton>
-               <IconButton aria-label="repeat">
+               <IconButton
+                  onClick={() =>
+                     sendMessageToNode('open-db', {
+                        path: '%appdata%',
+                     })
+                  }
+                  aria-label="repeat"
+               >
                   <RepeatRounded />
                </IconButton>
                <IconButton

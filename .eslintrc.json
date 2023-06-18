@@ -1,0 +1,19 @@
+{
+   "extends": ["eslint:recommended", "plugin:node/recommended"],
+   "rules": {
+      "no-unused-vars": [
+         "warn",
+         { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
+      ],
+      "node/no-unsupported-features/es-syntax": [
+         0,
+         {
+            "version": ">=8.0.0",
+            "ignores": []
+         }
+      ]
+   },
+   "parserOptions": {
+      "sourceType": "module"
+   }
+}
