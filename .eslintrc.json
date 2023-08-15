@@ -1,19 +1,24 @@
 {
-   "extends": ["eslint:recommended", "plugin:node/recommended"],
-   "rules": {
-      "no-unused-vars": [
-         "warn",
-         { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
-      ],
-      "node/no-unsupported-features/es-syntax": [
-         0,
-         {
-            "version": ">=8.0.0",
-            "ignores": []
-         }
-      ]
-   },
-   "parserOptions": {
-      "sourceType": "module"
-   }
+  "extends": ["eslint:recommended", "plugin:react/recommended", "plugin:node/recommended"],
+  "rules": {
+    "no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
+    ],
+    "node/no-unsupported-features/es-syntax": [
+      0,
+      {
+        "version": ">=8.0.0",
+        "ignores": []
+      }
+    ],
+    "node/no-unpublished-require": 0,
+    "react/prop-types": 0,
+    "react/react-in-jsx-scope": 0,
+    "node/no-unpublished-import": 0
+  },
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": 2020
+  }
 }

@@ -37,15 +37,18 @@ module.exports = {
               html: './src/index.html',
               js: './src/renderer.js',
               name: 'main_window',
-              // preload: {
-              //   js: "./src/preload.js",
-              // },
+              preload: {
+                js: './src/preload.js',
+              },
             },
-            // {
-            //   html: "./src/loader.html",
-            //   js: "./src/renderer2.js",
-            //   name: "loading",
-            // },
+            {
+              html: './src/mini_player.html',
+              js: './src/mini_player_renderer.js',
+              name: 'mini_player',
+              preload: {
+                js: './src/preload.js',
+              },
+            },
           ],
         },
       },
