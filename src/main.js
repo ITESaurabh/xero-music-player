@@ -48,8 +48,8 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
 const createWindow = () => {
   // Create the browser mainWindowdow.
   let params;
-  if (IS_DEV_MODE) {
-    params = `C:\\Users\\Saura\\Downloads\\Music\\04. burn down my house.mp3`;
+  if (!IS_DEV_MODE) {
+    params = `C:\\Users\\ITESaurabh\\Music\\ele.mp3`;
 
     // setTimeout(() => {
     //   params = 'C:\\Users\\Saura\\Downloads\\Music\\Chand Sifarish - Fanaa 320 Kbps.mp3';
@@ -76,10 +76,11 @@ const createWindow = () => {
       // });
     }
   }
+  // console.log(params);
   // eslint-disable-next-line no-useless-escape
   // const params = `C:\Users\Saura\Downloads\Music\Atif Aslam &Shreya Ghoshal - Jeene Laga Hoon.mp3`;
-  if (params) {
-    // dialog.showErrorBox('ARGS', `${params}`);
+  if (params && params !== '.') {
+    // dialog.showErrorBox('ARGS', `${typeof params}`);
 
     if (!miniWin || miniWin.isDestroyed()) {
       let loading = new BrowserWindow({
@@ -162,6 +163,7 @@ const createWindow = () => {
       miniWin.webContents.send('play-mini', params);
     }
   } else {
+    // dialog.showErrorBox('ARGS here', `${typeof params}`);
     let loading = new BrowserWindow({
       show: false,
       frame: false,
@@ -204,8 +206,9 @@ const createWindow = () => {
         frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-          color: '#131313',
+          color: '#050407',
           symbolColor: '#ffffff',
+          // height: 30,
         },
         webPreferences: {
           nodeIntegration: true,
@@ -222,7 +225,7 @@ const createWindow = () => {
         loading.close();
       });
       // relocating all IPC Events to mainProcess file to declutter this file
-      mainIpcs(mainWin);
+      // mainIpcs(mainWin);
       // long loading html
       mainWin.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
     });
