@@ -1,5 +1,6 @@
 export var APP_NAME = 'Xero Music Player';
 export var APP_VERSION = process.env.REACT_APP_VERSION;
+export var APP_EDITION = 'Beta';
 export var ORG_NAME = 'ITESoftcare';
 export var ORG_SITE = 'https://github.com/ITESoftcare';
 // export var BASE_COOKIE = 'base_cookie';

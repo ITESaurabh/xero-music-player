@@ -2,7 +2,7 @@ export const getBaseTheme = mode => ({
   palette: {
     mode,
     primary: {
-      main: mode === 'dark' ? '#FFD7F6' : '#9B2E99',
+      main: mode === 'dark' ? '#ffaaf4' : '#9b2e99',
     },
     secondary: {
       main: '#B76C6C',
@@ -13,12 +13,12 @@ export const getBaseTheme = mode => ({
     background: {
       ...(mode === 'dark'
         ? {
-            default: '#131313',
-            paper: '#272727',
+            default: '#201e23',
+            paper: '#27262a',
           }
         : {
-            default: '#ededed',
-            paper: '#fff',
+            default: '#f4f1f9',
+            paper: '#f9f8fc',
           }),
     },
     text: {
@@ -66,6 +66,25 @@ export const getBaseTheme = mode => ({
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 10,
+  },
+  //
+  // Overrides
+  // cssbaseline:
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        html: {
+          // paddingBottom: "8rem",
+          height: '100%',
+        },
+        body: {
+          height: '100%',
+        },
+        '#app': {
+          height: '100%',
+        },
+      },
+    },
   },
 });

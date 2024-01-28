@@ -1,4 +1,7 @@
-const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, dialog, nativeTheme } = require('electron');
+
+let isDarkMode = nativeTheme.shouldUseDarkColors;
+
 const path = require('path');
 const { default: mainIpcs } = require('./main/utils/mainProcess');
 const { IS_DEV_MODE } = require('./config/constants');
@@ -150,6 +153,7 @@ const createWindow = () => {
           // console.log('val', message);
           miniWin.webContents.send('play-mini', message);
         });
+        // eslint-disable-next-line no-undef
         miniWin.loadURL(MINI_PLAYER_WEBPACK_ENTRY);
       });
     } else {
@@ -206,9 +210,9 @@ const createWindow = () => {
         frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-          color: '#050407',
-          symbolColor: '#ffffff',
-          // height: 30,
+          color: isDarkMode ? '#201e23' : '#f4f1f9',
+          symbolColor: isDarkMode ? '#ffffff' : '#050407',
+          height: 32,
         },
         webPreferences: {
           nodeIntegration: true,
@@ -225,8 +229,9 @@ const createWindow = () => {
         loading.close();
       });
       // relocating all IPC Events to mainProcess file to declutter this file
-      // mainIpcs(mainWin);
+      mainIpcs(mainWin);
       // long loading html
+      // eslint-disable-next-line no-undef
       mainWin.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
     });
   }

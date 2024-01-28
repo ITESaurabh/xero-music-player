@@ -78,7 +78,9 @@ main {
   background-color: rgba(0, 0, 0, 0.1);
   border: solid rgba(0, 0, 0, 0.15);
   border-width: 1px 0;
-  box-shadow: inset 0 0.5em 1.5em rgba(0, 0, 0, 0.1), inset 0 0.125em 0.5em rgba(0, 0, 0, 0.15);
+  box-shadow:
+    inset 0 0.5em 1.5em rgba(0, 0, 0, 0.1),
+    inset 0 0.125em 0.5em rgba(0, 0, 0, 0.15);
 }
 
 .bi {
@@ -154,7 +156,7 @@ main {
   display: flex;
   z-index: 2000 !important;
   &_windows {
-    justify-content: space-between;
+    justify-content: start;
   }
   &_unix {
     justify-content: flex-start;
@@ -164,19 +166,15 @@ main {
   -webkit-user-select: none;
   -webkit-app-region: drag;
   z-index: 100;
-  .left {
-    display: flex;
-    align-items: center;
-    margin-top: 5px;
-    #logo {
-      width: 15px;
-    }
-  }
 }
 
 .tb-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  // display: grid;
+  // background-color: #27c93f;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  // grid-template-columns: 1fr 1fr 1fr;
   -webkit-app-region: no-drag;
 
   .tb-cntrl {
@@ -219,7 +217,7 @@ nav .control-window {
 
 .traffic-light {
   display: flex;
-  margin: 10px 0px 0px 5px;
+  margin-left: 1rem;
   border-radius: 100%;
   text-indent: -9999px;
   position: relative;
@@ -272,7 +270,9 @@ nav .control-window {
   background-clip: padding-box;
   background-color: RGBA(173, 63, 169, 1);
   -webkit-border-radius: 7px;
-  -webkit-box-shadow: inset -1px -1px 0px rgba(0, 0, 0, 0.05), inset 1px 1px 0px rgba(0, 0, 0, 0.05);
+  -webkit-box-shadow:
+    inset -1px -1px 0px rgba(0, 0, 0, 0.05),
+    inset 1px 1px 0px rgba(0, 0, 0, 0.05);
 }
 
 ::-webkit-scrollbar-button {
@@ -286,5 +286,5 @@ nav .control-window {
 }
 
 .lib-art-cont {
-   flex: '1 0 calc(13%)'
+  flex: "1 0 calc(13%)";
 }

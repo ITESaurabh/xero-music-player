@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell } from 'electron';
+import { dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { parseDir, parseMusic } from '../modules/FileParser';
 import { APP_CONF_FOLDER } from '../../config/core_config';
 
@@ -20,7 +20,9 @@ export default function mainIpcs(mainWin) {
   ipcMain.on('closeWindow', () => {
     mainWin.close();
   });
-
+  ipcMain.handle('get-dark-mode', () => {
+    return nativeTheme.shouldUseDarkColors;
+  });
   ipcMain.on('show-dialog', (e, payload) => {
     const { title } = payload;
     dialog.showMessageBox({
@@ -68,7 +70,7 @@ export default function mainIpcs(mainWin) {
 
     // const users = db.prepare('SELECT * FROM users').all();
     // console.log(users);
-  });main
+  });
 
   ipcMain.on('process-files', (e, payload) => {
     console.log(payload);
