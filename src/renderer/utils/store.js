@@ -4,6 +4,7 @@ import { setTheme } from './LocStoreUtil';
 const initialState = {
   isLightTheme: false,
   isMaximized: false,
+  isMenuExpanded: false,
   path: null,
   isPlaying: false,
   position: 0,
@@ -25,6 +26,12 @@ const StateProvider = ({ children }) => {
         return {
           ...state,
           isMaximized: action.payload,
+        };
+      }
+      case 'SET_MENU_EXPANDED': {
+        return {
+          ...state,
+          isMenuExpanded: action.payload,
         };
       }
       case 'SET_CURR_TRACK': {

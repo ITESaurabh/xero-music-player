@@ -1,6 +1,14 @@
 {
   "extends": ["eslint:recommended", "plugin:react/recommended", "plugin:node/recommended"],
   "rules": {
+    "node/no-missing-import": [
+      "error",
+      {
+        "allowModules": [],
+        "resolvePaths": ["src"],
+        "tryExtensions": [".js", ".jsx", ".json", ".node"]
+      }
+    ],
     "no-unused-vars": [
       "warn",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }

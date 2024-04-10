@@ -2,7 +2,8 @@ import React, { lazy } from 'react';
 import Layout from '../components/Layout';
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-const Library = lazy(() => import('../views/Library'));
+const AllSongs = lazy(() => import('../views/AllSongs'));
+const Albums = lazy(() => import('../views/Albums'));
 const Search = lazy(() => import('../views/Search'));
 
 const BigLoader = () => {
@@ -29,7 +30,7 @@ const routes = [
         index: true,
         element: (
           <React.Suspense fallback={BigLoader}>
-            <Library />
+            <AllSongs />
           </React.Suspense>
         ),
       },
@@ -53,7 +54,7 @@ const routes = [
         path: 'albums',
         element: (
           <React.Suspense fallback={BigLoader}>
-            <Search />
+            <Albums />
           </React.Suspense>
         ),
       },

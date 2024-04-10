@@ -1,5 +1,14 @@
 import React, { memo, useContext } from 'react';
-import { Box, Button, styled, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
+import {
+  Box,
+  Button,
+  styled,
+  Stack,
+  Typography,
+  useMediaQuery,
+  useTheme,
+  Drawer,
+} from '@mui/material';
 import { sendMessageToNode } from '../../main/utils/renProcess';
 import { OS_WINDOWS, OS_LINUX, APP_NAME, APP_EDITION } from '../../config/constants';
 import arrowleftIcon from '@iconify/icons-fluent/arrow-left-20-filled';
@@ -12,6 +21,7 @@ import menuIcon from '@iconify/icons-fluent/line-horizontal-3-20-filled';
 import AppIcon from 'svg-react-loader?name=AppIcon!../../img/logo.svg';
 import { Icon } from '@iconify/react';
 import { store } from '../utils/store';
+import MainDrawer from './MainDrawer';
 const os = require('os');
 
 const NavButtons = styled(ButtonBase)(({ theme, closeButton }) => ({
@@ -29,13 +39,40 @@ const NavButtons = styled(ButtonBase)(({ theme, closeButton }) => ({
 }));
 
 const Titlebar = memo(() => {
-  const { state } = useContext(store);
   const currOs = os.type();
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   const theme = useTheme();
+  const { state, dispatch } = useContext(store);
+
+  const toggleDrawer = () => {
+    dispatch({ type: 'SET_MENU_EXPANDED', payload: !state.isMenuExpanded });
+  };
 
   return (
     <>
+      {isPhone && (
+        <Drawer
+          open={state.isMenuExpanded}
+          PaperProps={{
+            style: {
+              paddingTop: '32px',
+              width: '100%',
+              maxWidth: 320,
+              backgroundColor:
+                theme.palette.mode === 'dark'
+                  ? theme.palette.common.black
+                  : theme.palette.common.white,
+              overflow: 'hidden',
+              borderRight: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              msOverflowStyle: 'none',
+            },
+          }}
+          onClose={() => dispatch({ type: 'SET_MENU_EXPANDED', payload: false })}
+        >
+          <MainDrawer tempDrawer />
+        </Drawer>
+      )}
       <Box
         className={
           currOs === OS_WINDOWS ? 'title-bar title-bar_windows' : 'title-bar title-bar_unix'
@@ -68,7 +105,11 @@ const Titlebar = memo(() => {
               <Icon icon={arrowleftIcon} height="1.4em" />
             </Button>
             {isPhone && (
-              <Button sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }} size="small">
+              <Button
+                onClick={toggleDrawer}
+                sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }}
+                size="small"
+              >
                 <Icon icon={menuIcon} height="1.4em" />
               </Button>
             )}

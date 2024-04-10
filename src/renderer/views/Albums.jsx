@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Paper, AppBar, Toolbar, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
-const Library = () => {
+const Albums = () => {
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   var numberArray = new Array(50).fill(0);
 
@@ -23,7 +23,7 @@ const Library = () => {
               lineHeight: 'normal',
             }}
           >
-            My Library
+            My Albums
           </Typography>
         </Toolbar>
       </AppBar>
@@ -44,4 +44,4 @@ const Library = () => {
   );
 };
 
-export default Library;
+export default Albums;
