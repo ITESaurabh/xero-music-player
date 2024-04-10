@@ -14,13 +14,13 @@ const root = ReactDOM.createRoot(document.getElementById('app'));
 function render() {
   root.render(
     <React.StrictMode>
-      <IpcProvider>
-        <StateProvider>
+      <StateProvider>
+        <IpcProvider>
           <HashRouter>
             <App />
           </HashRouter>
-        </StateProvider>
-      </IpcProvider>
+        </IpcProvider>
+      </StateProvider>
     </React.StrictMode>
   );
 }

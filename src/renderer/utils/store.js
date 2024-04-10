@@ -2,7 +2,8 @@ import React, { createContext, useReducer } from 'react';
 import { setTheme } from './LocStoreUtil';
 
 const initialState = {
-  isLightTheme: true,
+  isLightTheme: false,
+  isMaximized: false,
   path: null,
   isPlaying: false,
   position: 0,
@@ -20,35 +21,33 @@ const StateProvider = ({ children }) => {
           isLightTheme: action.payload,
         };
       }
+      case 'SET_IS_MAXIMIZED': {
+        return {
+          ...state,
+          isMaximized: action.payload,
+        };
+      }
       case 'SET_CURR_TRACK': {
-        // console.log('STATEINGr');
         return {
           ...initialState,
           path: action.payload.path,
-          // isLightTheme: action.payload,
         };
       }
       case 'SET_IS_PLAYING': {
-        // console.log('STATEINGr');
         return {
           ...state,
           isPlaying: action.payload,
-          // isLightTheme: action.payload,
         };
       }
       case 'SET_PROGRESS': {
-        // console.log('STATEINGr');
         return {
           ...state,
           position: action.payload,
-          // isLightTheme: action.payload,
         };
       }
       case 'CHANGE_TRACK': {
-        // console.log('STATEINGr');
         return {
           ...initialState,
-          // isLightTheme: action.payload,
         };
       }
       default:

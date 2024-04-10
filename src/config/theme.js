@@ -8,7 +8,7 @@ export const getBaseTheme = mode => ({
       main: '#B76C6C',
     },
     error: {
-      main: '#C42B1C',
+      main: '#c42b1c',
     },
     background: {
       ...(mode === 'dark'

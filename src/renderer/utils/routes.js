@@ -1,29 +1,121 @@
-import React from "react";
-import Layout from "../components/Layout"
-import { Navigate } from "react-router-dom";
-import Test from "../components/Test";
-import NotFound from "../views/NotFound";
-import Library from "../views/Library";
-import Search from "../views/Search";
+import React, { lazy } from 'react';
+import Layout from '../components/Layout';
+import { Navigate } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
+const Library = lazy(() => import('../views/Library'));
+const Search = lazy(() => import('../views/Search'));
 
+const BigLoader = () => {
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        display: 'flex',
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  );
+};
 
 const routes = [
   {
-    path: "/main_window",
+    path: '/main_window',
     element: <Layout />,
     children: [
       {
         index: true,
-        element: <Library />
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Library />
+          </React.Suspense>
+        ),
       },
       {
-        path: "search",
-        element: <Search />
+        path: 'favourites',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
       },
-    ]
+      {
+        path: 'playlists',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'albums',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'artists',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'album-artists',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'folders',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'folder-hierarchy',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'genres',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'years',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <React.Suspense fallback={BigLoader}>
+            <Search />
+          </React.Suspense>
+        ),
+      },
+    ],
   },
-  { path: "*", element: <Navigate to="main_window" /> },
-//   { path: "*", element: <NotFound /> }
+  { path: '*', element: <Navigate to="main_window" /> },
 ];
 
-export default routes/* .filter((route) => route.enabled) */;
+export default routes /* .filter((route) => route.enabled) */;

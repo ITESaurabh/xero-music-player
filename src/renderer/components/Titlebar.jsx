@@ -1,31 +1,39 @@
-import React from 'react';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
-import ArrowBackIosNewOutlinedIcon from '@mui/icons-material/ArrowBackIosNewOutlined';
-import { AppBar, Box, Button, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
+import React, { memo, useContext } from 'react';
+import { Box, Button, styled, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { sendMessageToNode } from '../../main/utils/renProcess';
-import { useNavigate } from 'react-router-dom';
-import {
-  OS_WINDOWS,
-  OS_MAC,
-  OS_LINUX,
-  APP_NAME,
-  APP_VERSION,
-  APP_EDITION,
-} from '../../config/constants';
-import Image from 'mui-image';
-// import { ReactComponent as Logo } from '../../assets/logo/logo.svg';
+import { OS_WINDOWS, OS_LINUX, APP_NAME, APP_EDITION } from '../../config/constants';
 import arrowleftIcon from '@iconify/icons-fluent/arrow-left-20-filled';
+import minimizeIcon from '@iconify/icons-fluent/minimize-16-regular';
+import maximizeIcon from '@iconify/icons-fluent/maximize-16-regular';
+import restoreIcon from '@iconify/icons-fluent/square-multiple-16-regular';
+import closeIcon from '@iconify/icons-fluent/dismiss-16-regular';
+import ButtonBase from '@mui/material/ButtonBase';
 import menuIcon from '@iconify/icons-fluent/line-horizontal-3-20-filled';
-import AppIcon from 'svg-react-loader?name=AppIcon!../../assets/logo/logo.svg';
+import AppIcon from 'svg-react-loader?name=AppIcon!../../img/logo.svg';
 import { Icon } from '@iconify/react';
+import { store } from '../utils/store';
 const os = require('os');
 
-const Titlebar = () => {
+const NavButtons = styled(ButtonBase)(({ theme, closeButton }) => ({
+  height: '100%',
+  width: '46px',
+  transition: 'background-color 0.1s ease-in-out',
+  cursor: 'default',
+  '&:hover': {
+    backgroundColor: closeButton
+      ? theme.palette.error.main
+      : theme.palette.mode === 'dark'
+      ? 'rgba(255, 255, 255, 0.05)'
+      : 'rgba(0, 0, 0, 0.05)',
+  },
+}));
+
+const Titlebar = memo(() => {
+  const { state } = useContext(store);
   const currOs = os.type();
-  const navigate = useNavigate();
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   const theme = useTheme();
-  console.log(theme.palette.mode);
+
   return (
     <>
       <Box
@@ -54,15 +62,14 @@ const Titlebar = () => {
             alignItems={'center'}
             direction={'row'}
             sx={{ '-webkit-app-region': 'no-drag' }}
-            // spacing={'0.75rem'}
             ml={'0.5rem'}
           >
-            <Button sx={{ minWidth: '2rem', borderRadius: '0.4rem' }} size="small">
-              <Icon icon={arrowleftIcon} height="1.2em" />
+            <Button sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }} size="small">
+              <Icon icon={arrowleftIcon} height="1.4em" />
             </Button>
             {isPhone && (
-              <Button sx={{ minWidth: '2rem', borderRadius: '0.4rem' }} size="small">
-                <Icon icon={menuIcon} height="1.2em" />
+              <Button sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }} size="small">
+                <Icon icon={menuIcon} height="1.4em" />
               </Button>
             )}
           </Stack>
@@ -100,52 +107,22 @@ const Titlebar = () => {
             {APP_EDITION}
           </Typography>
         </Stack>
+        <Box flexGrow={1} />
+        <Box sx={{ '-webkit-app-region': 'no-drag', height: '100%' }}>
+          <NavButtons onClick={() => sendMessageToNode('minimize')}>
+            <Icon icon={minimizeIcon} />
+          </NavButtons>
+          <NavButtons onClick={() => sendMessageToNode('maximize')}>
+            <Icon icon={state.isMaximized ? restoreIcon : maximizeIcon} />
+          </NavButtons>
+          <NavButtons closeButton onClick={() => sendMessageToNode('closeWindow')}>
+            <Icon icon={closeIcon} />
+          </NavButtons>
+        </Box>
       </Box>
     </>
   );
-  //   return (
-  //     <>
-  //       <Box
-  //         className={
-  //           currOs === OS_WINDOWS ? 'title-bar title-bar_windows' : 'title-bar title-bar_unix'
-  //         }
-  //         sx={{ bgcolor: '#f4f1f9' }}
-  //       >
-  //         <div className="tb-controls">
-  //           {currOs === OS_LINUX && (
-  //             <div className="traffic-light">
-  //               <div onClick={() => sendMessageToNode('closeWindow')} className="close-unix">
-  //                 close
-  //               </div>
-  //               <div onClick={() => sendMessageToNode('minimize')} className="mini-unix">
-  //                 minimise
-  //               </div>
-  //               <div onClick={() => sendMessageToNode('maximize')} className="res-unix">
-  //                 resize
-  //               </div>
-  //             </div>
-  //           )}
-  //           <Box
-  //             className={currOs === OS_MAC ? 'mac_back' : 'tb-cntrl_windows'}
-  //             sx={{ visibility: window.history.length === 1 ? 'hidden' : 'inherit' }}
-  //             onClick={() => navigate(-1)}
-  //           >
-  //             <Button
-  //               color={currOs === OS_MAC || currOs === OS_LINUX ? 'primary' : 'inherit'}
-  //               sx={{ minWidth: currOs === OS_MAC || currOs === OS_LINUX ? 'inherit' : null }}
-  //               variant={currOs === OS_MAC || currOs === OS_LINUX ? 'contained' : 'text'}
-  //             >
-  //               {currOs === OS_MAC || currOs === OS_LINUX ? (
-  //                 <ArrowBackIosNewOutlinedIcon sx={{ fontSize: 15 }} />
-  //               ) : (
-  //                 <ArrowBackOutlinedIcon sx={{ fontSize: 20 }} />
-  //               )}
-  //             </Button>
-  //           </Box>
-  //         </div>
-  //       </Box>
-  //     </>
-  //   );
-};
+});
+Titlebar.displayName = 'Titlebar';
 
 export default Titlebar;

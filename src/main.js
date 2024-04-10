@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, dialog, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, nativeTheme, Menu } = require('electron');
 
 let isDarkMode = nativeTheme.shouldUseDarkColors;
 
@@ -7,6 +7,7 @@ const { default: mainIpcs } = require('./main/utils/mainProcess');
 const { IS_DEV_MODE } = require('./config/constants');
 let mainWin = null;
 let miniWin = null;
+Menu.setApplicationMenu(null);
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -114,9 +115,7 @@ const createWindow = () => {
           height: 250,
           show: false,
           resizable: false,
-          // backgroundColor: '#2e2c29',
-          // transparent: true,
-          // icon: '',
+          backgroundColor: '#2e2c29',
           opacity: 0.98,
           // thickFrame: false,
           darkTheme: true,
@@ -194,43 +193,46 @@ const createWindow = () => {
 
     loading.once('show', () => {
       mainWin = new BrowserWindow({
-        minWidth: 400,
+        minWidth: 450,
         minHeight: 400,
-        width: width - 500,
-        height: height - 200,
+        width: width - 200,
+        height: height - 100,
         show: false,
-        // backgroundColor: '#2e2c29',
-        // opacity:0.2,
-        darkTheme: true,
-        // titleBarStyle:'hidden',
+        // paintWhenInitiallyHidden: false,
+        backgroundColor: '#201e23',
+        opacity: 1,
+        darkTheme: isDarkMode ? true : false,
         trafficLightPosition: {
           x: 10,
           y: 13,
         },
         frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
         titleBarStyle: 'hidden',
-        titleBarOverlay: {
-          color: isDarkMode ? '#201e23' : '#f4f1f9',
-          symbolColor: isDarkMode ? '#ffffff' : '#050407',
-          height: 32,
-        },
+        // titleBarOverlay: {
+        //   color: isDarkMode ? '#201e23' : '#f4f1f9',
+        //   symbolColor: isDarkMode ? '#ffffff' : '#050407',
+        //   height: 32,
+        // },
         webPreferences: {
           nodeIntegration: true,
           contextIsolation: false,
           webSecurity: process.env.NODE_ENV !== 'development',
-          enableRemoteModule: true,
+          scrollBounce: true,
+          // backgroundThrottling: false
+          // enableRemoteModule: true,
         },
       });
-      mainWin.webContents.once('dom-ready', () => {
-        console.log('mainWin loaded');
-        console.log(process.env.NODE_ENV);
+      mainWin.setMenu(null);
+      mainWin.once('ready-to-show', () => {
+        // console.log('mainWin loaded');
+        // console.log(process.env.NODE_ENV);
         mainWin.show();
         loading.hide();
         loading.close();
       });
+
       // relocating all IPC Events to mainProcess file to declutter this file
       mainIpcs(mainWin);
-      // long loading html
       // eslint-disable-next-line no-undef
       mainWin.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
     });
@@ -244,6 +246,7 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser mainWindowdows.
 // Some APIs can only be used after this event occurs.
+
 app.on('ready', createWindow);
 
 // Quit when all mainWindowdows are closed, except on macOS. There, it's common

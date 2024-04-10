@@ -1,4 +1,4 @@
-import { dialog, ipcMain, nativeTheme, shell } from 'electron';
+import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { parseDir, parseMusic } from '../modules/FileParser';
 import { APP_CONF_FOLDER } from '../../config/core_config';
 
@@ -7,6 +7,21 @@ function sendMessageToRendererProcess(window, message, payload) {
 }
 export default function mainIpcs(mainWin) {
   // mainWin.webContents.send('asynchronous-message', {'SAVED': 'File Saved'});
+  // mainWin.webContents.openDevTools();
+  mainWin.on('minimize', () => {
+    mainWin.setOpacity(1);
+    setTimeout(() => {
+      mainWin.setOpacity(0);
+    }, 2000 / 60);
+  });
+
+  mainWin.on('restore', async () => {
+    mainWin.setOpacity(0);
+    setTimeout(() => {
+      mainWin.setOpacity(1);
+    }, 6000 / 60);
+  });
+
   ipcMain.on('minimize', () => mainWin.minimize());
   ipcMain.on('maximize', () => {
     if (mainWin.isMaximized()) {
@@ -16,7 +31,15 @@ export default function mainIpcs(mainWin) {
       mainWin.maximize();
     }
   });
-
+  mainWin.on('resize', () => {
+    if (!mainWin.isMinimized()) {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        const isMax = win.isMaximized();
+        return sendMessageToRendererProcess(mainWin, 'expand-state', isMax);
+      }
+    }
+  });
   ipcMain.on('closeWindow', () => {
     mainWin.close();
   });

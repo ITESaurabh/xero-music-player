@@ -11,7 +11,8 @@ import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import VolumeUpRounded from '@mui/icons-material/VolumeUpRounded';
 import VolumeDownRounded from '@mui/icons-material/VolumeDownRounded';
-import { Card, Grid, Hidden, Paper } from '@mui/material';
+import { Card, Hidden, useMediaQuery } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import DiscordIcon from 'svg-react-loader?name=DiscordIcon!../../img/discord-logo.svg';
 import { RepeatRounded, ShuffleRounded } from '@mui/icons-material';
 import { sendMessageToNode } from '../../main/utils/renProcess';
@@ -41,6 +42,7 @@ export default function PlayBar() {
   const theme = useTheme();
   const duration = 200; // seconds
   const [position, setPosition] = React.useState(32);
+  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   const [paused, setPaused] = React.useState(false);
   function formatDuration(value) {
     const minute = Math.floor(value / 60);
@@ -51,15 +53,10 @@ export default function PlayBar() {
   const lightIconColor =
     theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
   return (
-    <Box sx={{ px: '1.5rem' }}>
+    <Box sx={{ px: isPhone ? 0 : '1.5rem' }}>
       <Grid
         container
-        //  direction="column"
-        //  alignh6s="center"
-        //  justify="center"
         sx={{
-          //   marginInline: '2rem',
-          //   marginBottom: '2rem',
           backdropFilter: 'blur(40px)',
           width: '100%',
           backgroundColor:
@@ -68,10 +65,7 @@ export default function PlayBar() {
         elevation={3}
         component={Card}
       >
-        <Grid item xs={6}>
-          {/* <CoverImage>
-               <img alt="Cover" src="https://source.unsplash.com/random/500x500" />
-            </CoverImage> */}
+        <Grid xs={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
             <Hidden mdDown>
               <CoverImage>
@@ -92,7 +86,7 @@ export default function PlayBar() {
             </Box>
           </Box>
         </Grid>
-        <Grid justifyContent="center" alignContent="center" item xs={5}>
+        <Grid justifyContent="center" alignContent="center" xs={5}>
           <Box marginInline={3} mt={2}>
             <Slider
               aria-label="time-indicator"
@@ -195,7 +189,7 @@ export default function PlayBar() {
             </Stack>
           </Box>
         </Grid>
-        <Grid item xs={1} direction="row">
+        <Grid xs={1} direction="row">
           <Box m={2}>
             <IconButton
               onClick={() =>

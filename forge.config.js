@@ -1,3 +1,6 @@
+const { FusesPlugin } = require('@electron-forge/plugin-fuses');
+const { FuseVersion, FuseV1Options } = require('@electron/fuses');
+
 module.exports = {
   packagerConfig: {
     icon: './src/assets/logo/XeroTunesLogo',
@@ -30,7 +33,7 @@ module.exports = {
       name: '@electron-forge/plugin-webpack',
       config: {
         mainConfig: './webpack.main.config.js',
-        devContentSecurityPolicy: "'unsafe-eval'",
+        // devContentSecurityPolicy: "'unsafe-eval'",
         renderer: {
           config: './webpack.renderer.config.js',
           entryPoints: [
@@ -58,5 +61,16 @@ module.exports = {
       name: '@electron-forge/plugin-auto-unpack-natives',
       config: {},
     },
+    // Fuses are used to enable/disable various Electron functionality
+    // at package time, before code signing the application
+    new FusesPlugin({
+      version: FuseVersion.V1,
+      [FuseV1Options.RunAsNode]: false,
+      [FuseV1Options.EnableCookieEncryption]: true,
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+      [FuseV1Options.EnableNodeCliInspectArguments]: false,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    }),
   ],
 };
