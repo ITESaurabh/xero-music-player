@@ -1,6 +1,13 @@
 import React, { useContext } from 'react';
 import List from '@mui/material/List';
-import { ListItemButton, ListItemIcon, ListItemText, ListSubheader, Divider } from '@mui/material';
+import {
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  ListSubheader,
+  Divider,
+  useTheme,
+} from '@mui/material';
 import SearchBar from './SearchBar';
 import { Link, useMatch, useResolvedPath } from 'react-router-dom';
 import musicNoteIcon from '@iconify/icons-fluent/music-note-2-24-regular';
@@ -95,7 +102,7 @@ const menuItems = [
 
 function MainDrawer({ tempDrawer }) {
   const { state, dispatch } = useContext(store);
-
+  const theme = useTheme();
   const toggleDrawer = () => {
     dispatch({ type: 'SET_MENU_EXPANDED', payload: !state.isMenuExpanded });
   };
@@ -116,14 +123,19 @@ function MainDrawer({ tempDrawer }) {
         subheader={<li />}
         // sx={{ p: 1 }}
       >
-        <ListSubheader disableGutters sx={{ borderRadius: 100, backgroundColor: '#201e23' }}>
-          {/* <Box sx={{ position: 'sticky' }}> */}
+        <ListSubheader
+          disableGutters
+          sx={{
+            borderRadius: 100,
+            backgroundColor:
+              theme.palette.mode === 'dark' ? '#201e23' : theme.palette.background.paper,
+          }}
+        >
           <SearchBar
             open={state.isMenuExpanded}
             tempDrawer={tempDrawer}
             toggleDrawer={toggleDrawer}
           />
-          {/* </Box> */}
         </ListSubheader>
         {menuItems.map((item, index) => (
           <CustomLink key={index} item={item} />
@@ -146,7 +158,6 @@ function MainDrawer({ tempDrawer }) {
 function CustomLink({ item, ...props }) {
   let resolved = useResolvedPath(item.href);
   let match = useMatch({ path: resolved.pathname, end: true });
-  // console.log(match);
   return (
     <>
       <ListItemButton

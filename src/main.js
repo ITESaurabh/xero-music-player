@@ -2,13 +2,20 @@ const { app, BrowserWindow, ipcMain, screen, nativeTheme, Menu } = require('elec
 
 let isDarkMode = nativeTheme.shouldUseDarkColors;
 
+const fs = require('fs');
 const path = require('path');
 const { default: mainIpcs } = require('./main/utils/mainProcess');
-const { IS_DEV_MODE } = require('./config/constants');
 let mainWin = null;
 let miniWin = null;
+let loadingWin = null;
 Menu.setApplicationMenu(null);
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+
+const parsedArgs = require('minimist')(process.argv.slice(1), {
+  boolean: ['help', 'version'],
+  string: ['file'],
+  alias: { help: 'h', version: 'v', file: 'f' },
+});
+
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
@@ -19,7 +26,7 @@ if (!isSingleInstance) {
   app.quit();
 }
 
-app.on('second-instance', (event, commandLine, workingDirectory) => {
+app.on('second-instance', (event, commandLine) => {
   if (process.platform !== 'darwin') {
     // Extract the parameter from the command-line arguments.
     const args = commandLine.slice(1);
@@ -27,89 +34,44 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
       const params = args[1];
 
       // Handle the new parameter received from the second instance
-      // Here, you can pass the new parameter to your "mini player" window or any other logic you need.
       if (miniWin) {
-        // dialog.showMessageBoxSync({
-        //   title: 'GOT!',
-        //   message: params,
-        //   buttons: ['OK'],
-        // });
         miniWin.webContents.send('play-mini', params);
-      } else {
-        // createMiniPlayerWindow(params);
       }
     }
   }
 });
 
-// dialog.showMessageBox({
-//   title :"TEST",
-//   message: 'Hi',
-//   buttons: ['OK']
-// })
-// console.log(global.sharedObject);
-
 const createWindow = () => {
-  // Create the browser mainWindowdow.
-  let params;
-  if (!IS_DEV_MODE) {
-    params = `C:\\Users\\ITESaurabh\\Music\\ele.mp3`;
+  loadingWin = new BrowserWindow({
+    show: false,
+    frame: false,
+    titleBarStyle: 'hidden',
+    width: 400,
+    height: 250,
+    // opacity: 0.98,
+    backgroundColor: '#050407',
+    backgroundMaterial: 'auto',
+    darkTheme: true,
+    minimizable: false,
+    maximizable: false,
+    resizable: false,
+    icon: './assets/logo/XeroTunesLogo.png',
+  });
 
-    // setTimeout(() => {
-    //   params = 'C:\\Users\\Saura\\Downloads\\Music\\Chand Sifarish - Fanaa 320 Kbps.mp3';
-    // }, 10000);
+  loadingWin.loadFile(path.join(__dirname, 'loader.html'));
 
-    // params = process.argv[1];
-  } else {
-    params = process.argv[1];
-    // console.log("PARAMS",params);
+  loadingWin.once('ready-to-show', () => {
+    loadingWin.show();
+  });
 
-    try {
-      // dialog.showMessageBoxSync({
-      //   title: 'play-mini',
-      //   message: params,
-      //   buttons: ['OK'],
-      // });
-      // mainWin.
-      miniWin.webContents.send('play-mini', params);
-    } catch (err) {
-      // dialog.showMessageBox({
-      //   title: 'ERROR',
-      //   message: JSON.stringify(err),
-      //   buttons: ['OK'],
-      // });
-    }
+  const firstArg = parsedArgs._[0];
+  if (firstArg && firstArg !== '.' && fs.existsSync(path.resolve(firstArg))) {
+    parsedArgs['file'] = firstArg;
   }
-  // console.log(params);
-  // eslint-disable-next-line no-useless-escape
-  // const params = `C:\Users\Saura\Downloads\Music\Atif Aslam &Shreya Ghoshal - Jeene Laga Hoon.mp3`;
-  if (params && params !== '.') {
-    // dialog.showErrorBox('ARGS', `${typeof params}`);
 
+  if (parsedArgs['file']) {
     if (!miniWin || miniWin.isDestroyed()) {
-      let loading = new BrowserWindow({
-        show: false,
-        frame: false,
-        width: 400,
-        height: 250,
-        backgroundColor: '#050407',
-        darkTheme: true,
-        resizable: false,
-        webPreferences: {
-          webSecurity: process.env.NODE_ENV !== 'development',
-          enableRemoteModule: true,
-        },
-
-        // icon: './assets/logo/XeroTunesLogo.png',
-      });
-      // console.log("DOIR", __dirname);
-      loading.loadFile(path.join(__dirname, 'loader.html'));
-
-      loading.once('ready-to-show', () => {
-        loading.show();
-      });
-
-      loading.once('show', () => {
+      loadingWin.once('show', () => {
         miniWin = new BrowserWindow({
           width: 400,
           height: 250,
@@ -120,21 +82,22 @@ const createWindow = () => {
           // thickFrame: false,
           darkTheme: true,
           minimizable: false,
+          maximizable: false,
           alwaysOnTop: false,
           frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
           titleBarStyle: 'hidden',
           webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            webSecurity: false,
-            enableRemoteModule: false,
+            webSecurity: process.env.NODE_ENV !== 'development',
           },
         });
         miniWin.webContents.once('dom-ready', () => {
           miniWin.show();
-          miniWin.webContents.send('play-mini', params);
-          loading.hide();
-          loading.close();
+          // miniWin.webContents.openDevTools();
+          miniWin.webContents.send('play-mini', path.resolve(parsedArgs['file']));
+          loadingWin.hide();
+          loadingWin.close();
         });
         ipcMain.on('minimize', () => miniWin.minimize());
         ipcMain.on('maximize', () => {
@@ -149,7 +112,6 @@ const createWindow = () => {
           miniWin.close();
         });
         ipcMain.on('add-track', (e, message) => {
-          // console.log('val', message);
           miniWin.webContents.send('play-mini', message);
         });
         // eslint-disable-next-line no-undef
@@ -157,91 +119,62 @@ const createWindow = () => {
       });
     } else {
       // If the "mini player" window is already open, update its contents with the new parameter.
-      // dialog.showMessageBox({
-      //   title: 'MAIN FOUND',
-      //   message: params,
-      //   buttons: ['OK'],
-      // });
       miniWin.show();
-      miniWin.webContents.send('play-mini', params);
+      miniWin.webContents.send('play-mini', path.resolve(parsedArgs['file']));
+      // miniWin.webContents.openDevTools();
     }
-  } else {
-    // dialog.showErrorBox('ARGS here', `${typeof params}`);
-    let loading = new BrowserWindow({
-      show: false,
-      frame: false,
-      width: 400,
-      height: 250,
-      backgroundColor: '#050407',
-      darkTheme: true,
-      resizable: false,
-      webPreferences: {
-        webSecurity: process.env.NODE_ENV !== 'development',
-        enableRemoteModule: true,
-      },
-      // icon: './assets/logo/XeroTunesLogo.png',
-    });
-    // console.log("DOIR", __dirname);
-    loading.loadFile(path.join(__dirname, 'loader.html'));
-
-    loading.once('ready-to-show', () => {
-      loading.show();
-    });
-
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
-
-    loading.once('show', () => {
-      mainWin = new BrowserWindow({
-        minWidth: 450,
-        minHeight: 400,
-        width: width - 200,
-        height: height - 100,
-        show: false,
-        // paintWhenInitiallyHidden: false,
-        backgroundColor: '#201e23',
-        opacity: 1,
-        darkTheme: isDarkMode ? true : false,
-        trafficLightPosition: {
-          x: 10,
-          y: 13,
-        },
-        frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
-        titleBarStyle: 'hidden',
-        // titleBarOverlay: {
-        //   color: isDarkMode ? '#201e23' : '#f4f1f9',
-        //   symbolColor: isDarkMode ? '#ffffff' : '#050407',
-        //   height: 32,
-        // },
-        webPreferences: {
-          nodeIntegration: true,
-          contextIsolation: false,
-          webSecurity: process.env.NODE_ENV !== 'development',
-          scrollBounce: true,
-          // backgroundThrottling: false
-          // enableRemoteModule: true,
-        },
-      });
-      mainWin.setMenu(null);
-      mainWin.once('ready-to-show', () => {
-        // console.log('mainWin loaded');
-        // console.log(process.env.NODE_ENV);
-        mainWin.show();
-        loading.hide();
-        loading.close();
-      });
-
-      // relocating all IPC Events to mainProcess file to declutter this file
-      mainIpcs(mainWin);
-      // eslint-disable-next-line no-undef
-      mainWin.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-    });
+    return;
   }
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
-};
+  // console.log(parsedArgs, process.argv);
 
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
+  loadingWin.once('show', () => {
+    mainWin = new BrowserWindow({
+      minWidth: 450,
+      minHeight: 400,
+      width: width - 200,
+      height: height - 100,
+      show: false,
+      backgroundColor: '#201e23',
+      backgroundMaterial: 'auto',
+      opacity: 1,
+      darkTheme: isDarkMode ? true : false,
+      trafficLightPosition: {
+        x: 10,
+        y: 13,
+      },
+      frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
+      titleBarStyle: 'hidden',
+      // titleBarOverlay: {
+      //   color: isDarkMode ? '#201e23' : '#f4f1f9',
+      //   symbolColor: isDarkMode ? '#ffffff' : '#050407',
+      //   height: 32,
+      // },
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        webSecurity: process.env.NODE_ENV !== 'development',
+        scrollBounce: true,
+        // backgroundThrottling: false
+        // enableRemoteModule: true,
+      },
+    });
+    mainWin.setMenu(null);
+    mainWin.once('ready-to-show', () => {
+      mainWin.show();
+      loadingWin.hide();
+      loadingWin.close();
+    });
+
+    // relocating all IPC Events to mainProcess file to declutter this file
+    mainIpcs(mainWin);
+    // eslint-disable-next-line no-undef
+    mainWin.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  });
+};
 // Example usage: Call the function when you want to update the parameters in the existing window
 // This method will be called when Electron has finished
 // initialization and is ready to create browser mainWindowdows.

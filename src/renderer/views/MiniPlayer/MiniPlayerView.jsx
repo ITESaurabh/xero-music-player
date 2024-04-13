@@ -174,6 +174,7 @@ export default function MiniPlayerView() {
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
+        width: '100vw',
         overflow: 'hidden',
       }}
       className="play-area"
@@ -245,11 +246,10 @@ export default function MiniPlayerView() {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              width: '12.875rem',
-              maxWidth: '12.875rem',
+              width: '100%',
             }}
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', maxWidth: '12.8rem' }}>
               {songMeta.title?.length <= maxCharacters ? (
                 <Typography variant="h5" noWrap>
                   {songMeta.title}

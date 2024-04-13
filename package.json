@@ -5,7 +5,7 @@
   "description": "An open source cross platform music player application.",
   "main": ".webpack/main",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "electron-forge start --",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
@@ -55,6 +55,7 @@
     "better-sqlite3": "^9.4.5",
     "electron-squirrel-startup": "^1.0.0",
     "jsmediatags": "^3.9.7",
+    "minimist": "^1.2.8",
     "mui-image": "^1.0.7",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",

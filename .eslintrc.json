@@ -1,5 +1,8 @@
 {
   "extends": ["eslint:recommended", "plugin:react/recommended", "plugin:node/recommended"],
+  "env": {
+    "browser": true
+  },
   "rules": {
     "node/no-missing-import": [
       "error",

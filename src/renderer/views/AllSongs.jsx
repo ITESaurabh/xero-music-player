@@ -1,60 +1,92 @@
 import React from 'react';
-import { Box, Typography, Paper, AppBar, Toolbar, useMediaQuery } from '@mui/material';
+import {
+  Table,
+  Container,
+  styled,
+  TableCell,
+  TableBody,
+  TableRow,
+  tableCellClasses,
+  Button,
+  useMediaQuery,
+  ButtonBase,
+} from '@mui/material';
 import useScrollTrigger from '@mui/material/useScrollTrigger';
-import Grid from '@mui/material/Unstable_Grid2/Grid2';
+import filterIcon from '@iconify/icons-fluent/filter-24-filled';
+import { Icon } from '@iconify/react';
+import PageToolbar from '../components/PageToolbar';
+import { Link } from 'react-router-dom';
 
-// function HideOnScroll({ children }) {
-//   const trigger = useScrollTrigger();
-//   console.log(trigger);
-//   return (
-//     <Slide appear={false} direction="down" in={!trigger}>
-//       {children}
-//     </Slide>
-//   );
-// }
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: theme.palette.common.black,
+    color: theme.palette.common.white,
+  },
+  [`&.${tableCellClasses.body}`]: {
+    fontSize: 14,
+  },
+}));
+
+const CustomButton = styled(ButtonBase)(({ theme }) => ({
+  padding: 5,
+  borderRadius: theme.shape.borderRadius,
+  transition: 'background-color 0.1s ease-in-out',
+  [':hover']: {
+    color: theme.palette.primary.main,
+    backgroundColor: theme.palette.action.hover,
+  },
+}));
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  // hide last border
+  '&:last-child td, &:last-child th': {
+    border: 0,
+  },
+}));
 
 const AllSongs = () => {
-  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
-  var numberArray = new Array(80).fill(0);
   const trigger1 = useScrollTrigger();
+  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   console.log(trigger1, 'awdaw');
   return (
     <>
-      {/* <HideOnScroll {...props}> */}
-      <AppBar
-        position="sticky"
-        color="transparent"
-        sx={{ backgroundColor: '#323135' }}
-        elevation={0}
-      >
-        <Toolbar sx={{ py: '1.5rem', px: '2rem' }} disableGutters>
-          <Typography
-            variant="h3"
-            sx={{
-              fontFamily: 'Roboto',
-              fontStyle: 'normal',
-              fontWeight: '400',
-              lineHeight: 'normal',
-            }}
-          >
-            All Songs
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      {/* </HideOnScroll> */}
-      <Grid container spacing={2} xs={12}>
-        <Grid xs={12} ml={isPhone ? '1.5rem' : '2rem'}>
-          <Box display="flex" flexWrap="wrap">
-            {numberArray.map((item, index) => (
-              <Box m={0.8} className="lib-art-cont" key={index}>
-                <Paper sx={{ height: '150px', width: '160px', backgroundColor: 'black' }}>
-                  Art {index}
-                </Paper>
-              </Box>
+      <PageToolbar
+        title="All Songs"
+        action={
+          <Button variant="contained" startIcon={<Icon icon={filterIcon} />}>
+            Filter
+          </Button>
+        }
+      />
+      <Container maxWidth="xl">
+        <Table>
+          <TableBody>
+            {Array.from({ length: 50 }).map((item, index) => (
+              <StyledTableRow key={index}>
+                <StyledTableCell component="th" scope="row">
+                  1x1 (feat. Nova Twins)
+                </StyledTableCell>
+                <StyledTableCell align="right">Bring Me The Horizon & Nova Twins</StyledTableCell>
+                {!isPhone && (
+                  <>
+                    <StyledTableCell align="right">
+                      <CustomButton component={Link} to="/main_window/artists">
+                        POST HUMAN: SURVIVAL HORROR
+                      </CustomButton>
+                    </StyledTableCell>
+                    <StyledTableCell align="right">2020</StyledTableCell>
+                    <StyledTableCell align="right">Rock</StyledTableCell>
+                  </>
+                )}
+                <StyledTableCell align="right">03:29</StyledTableCell>
+              </StyledTableRow>
             ))}
-          </Box>
-        </Grid>
-      </Grid>
+          </TableBody>
+        </Table>
+      </Container>
     </>
   );
 };

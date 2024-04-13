@@ -14,18 +14,10 @@ import './renderer/styles/mini_player.scss';
 
 const root = ReactDOM.createRoot(document.getElementById('app'));
 
-const App = ({ miniPlayer }) => {
+const App = () => {
   let isDarkThemePreferred = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  if (isDarkThemePreferred) {
-    // Dark theme is preferred by the user/system
-    console.log('Dark theme preferred');
-  } else {
-    // Light theme is preferred by the user/system
-    console.log('Light theme preferred');
-  }
-
-  const { state, dispatch } = useContext(store);
+  const { dispatch } = useContext(store);
   const currTheme = getTheme();
   let themePref = !isDarkThemePreferred ? 'light' : 'dark';
   const darkModeTheme = createTheme(getBaseTheme(themePref));
