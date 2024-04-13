@@ -52,7 +52,6 @@ const createWindow = () => {
     backgroundColor: '#050407',
     backgroundMaterial: 'auto',
     darkTheme: true,
-    minimizable: false,
     maximizable: false,
     resizable: false,
     icon: './assets/logo/XeroTunesLogo.png',
@@ -81,7 +80,6 @@ const createWindow = () => {
           opacity: 0.98,
           // thickFrame: false,
           darkTheme: true,
-          minimizable: false,
           maximizable: false,
           alwaysOnTop: false,
           frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
