@@ -4,7 +4,7 @@ const { FuseVersion, FuseV1Options } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     icon: './src/assets/logo/XeroTunesLogo',
-    executableName: 'xero-mp',
+    executableName: 'xero-music-player',
     asar: true,
   },
   rebuildConfig: {},
@@ -12,7 +12,7 @@ module.exports = {
     {
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: 'xero-mp',
+        name: "xero-music-player",
         icon: './src/assets/logo/XeroTunesLogo.ico',
       },
     },
@@ -22,11 +22,15 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: { name: 'xero-mp' },
+      config: {
+        name: "xero-music-player",
+      },
     },
     {
       name: '@electron-forge/maker-rpm',
-      config: { name: 'xero-mp' },
+      config: {
+        name: "xero-music-player",
+      },
     },
   ],
   plugins: [
