@@ -3,10 +3,10 @@ import PropTypes from 'prop-types';
 const { ipcRenderer } = require('electron');
 
 export function sendMessageToNode(message, payload) {
-    ipcRenderer.send(message, payload);
+  ipcRenderer.send(message, payload);
 }
 
 sendMessageToNode.propTypes = {
-    message: PropTypes.String,
-    payload: PropTypes.any
+  message: PropTypes.String,
+  payload: PropTypes.any,
 };

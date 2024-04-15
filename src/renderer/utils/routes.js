@@ -5,6 +5,7 @@ import { Box, CircularProgress } from '@mui/material';
 const AllSongs = lazy(() => import('../views/AllSongs'));
 const Albums = lazy(() => import('../views/Albums'));
 const Search = lazy(() => import('../views/Search'));
+const Settings = lazy(() => import('../views/Settings'));
 
 const BigLoader = () => {
   return (
@@ -110,7 +111,7 @@ const routes = [
         path: 'settings',
         element: (
           <React.Suspense fallback={BigLoader}>
-            <Search />
+            <Settings />
           </React.Suspense>
         ),
       },

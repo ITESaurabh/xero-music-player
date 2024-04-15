@@ -78,7 +78,6 @@ const createWindow = () => {
           resizable: false,
           backgroundColor: '#2e2c29',
           opacity: 0.98,
-          // thickFrame: false,
           darkTheme: true,
           maximizable: false,
           alwaysOnTop: false,
@@ -123,7 +122,6 @@ const createWindow = () => {
     }
     return;
   }
-
   // console.log(parsedArgs, process.argv);
 
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -137,7 +135,6 @@ const createWindow = () => {
       height: height - 100,
       show: false,
       backgroundColor: '#201e23',
-      backgroundMaterial: 'auto',
       opacity: 1,
       darkTheme: isDarkMode ? true : false,
       trafficLightPosition: {
@@ -154,6 +151,7 @@ const createWindow = () => {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
+        nodeIntegrationInWorker: true,
         webSecurity: process.env.NODE_ENV !== 'development',
         scrollBounce: true,
         // backgroundThrottling: false
@@ -184,7 +182,7 @@ app.on('ready', createWindow);
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darmainWindow') {
+  if (process.platform !== 'darwin') {
     app.quit();
   }
 });
