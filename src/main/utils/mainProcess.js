@@ -56,11 +56,6 @@ export default function mainIpcs(mainWin) {
     });
   });
 
-  ipcMain.on('open-dir', (e, payload) => {
-    const tester = require('../modules/tester');
-    tester.start();
-    shell.openPath(APP_CONF_FOLDER);
-  });
   ipcMain.on('open-db', (e, payload) => {
     const db = require('../../database');
 

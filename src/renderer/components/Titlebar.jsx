@@ -10,7 +10,7 @@ import {
   Drawer,
 } from '@mui/material';
 import { sendMessageToNode } from '../../main/utils/renProcess';
-import { OS_WINDOWS, OS_LINUX, APP_NAME, APP_EDITION } from '../../config/constants';
+import { OS_WINDOWS, OS_LINUX, APP_NAME, APP_EDITION, OS_MAC } from '../../config/constants';
 import arrowleftIcon from '@iconify/icons-fluent/arrow-left-20-filled';
 import minimizeIcon from '@iconify/icons-fluent/minimize-16-regular';
 import maximizeIcon from '@iconify/icons-fluent/maximize-16-regular';
@@ -77,7 +77,7 @@ const Titlebar = memo(() => {
         className={
           currOs === OS_WINDOWS ? 'title-bar title-bar_windows' : 'title-bar title-bar_unix'
         }
-        sx={{ bgcolor: theme.palette.mode === 'light' ? '#f4f1f9' : '#201e23', height: '32px' }}
+        sx={{ bgcolor: theme.palette.mode === 'light' ? '#f4f1f9' : '#201e23', height: '32px', pl: currOs === OS_MAC ? 8.5 : 0 }}
       >
         <div className="tb-controls">
           {currOs === OS_LINUX && (
@@ -149,6 +149,7 @@ const Titlebar = memo(() => {
           </Typography>
         </Stack>
         <Box flexGrow={1} />
+        {currOs === OS_WINDOWS &&
         <Box sx={{ '-webkit-app-region': 'no-drag', height: '100%' }}>
           <NavButtons onClick={() => sendMessageToNode('minimize')}>
             <Icon icon={minimizeIcon} />
@@ -160,6 +161,7 @@ const Titlebar = memo(() => {
             <Icon icon={closeIcon} />
           </NavButtons>
         </Box>
+        }
       </Box>
     </>
   );

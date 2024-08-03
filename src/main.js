@@ -49,6 +49,10 @@ const createWindow = () => {
     width: 400,
     height: 250,
     // opacity: 0.98,
+    trafficLightPosition: {
+      x: -20,
+      y: -20,
+    },
     backgroundColor: '#050407',
     backgroundMaterial: 'auto',
     darkTheme: true,
@@ -56,7 +60,7 @@ const createWindow = () => {
     resizable: false,
     icon: './assets/logo/XeroTunesLogo.png',
   });
-
+  
   loadingWin.loadFile(path.join(__dirname, 'loader.html'));
 
   loadingWin.once('ready-to-show', () => {
@@ -81,8 +85,12 @@ const createWindow = () => {
           darkTheme: true,
           maximizable: false,
           alwaysOnTop: false,
-          frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
+          frame: false,
           titleBarStyle: 'hidden',
+          trafficLightPosition: {
+            x: -20,
+            y: -20,
+          },
           webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -138,8 +146,8 @@ const createWindow = () => {
       opacity: 1,
       darkTheme: isDarkMode ? true : false,
       trafficLightPosition: {
-        x: 10,
-        y: 13,
+        x: 13,
+        y: 8,
       },
       frame: false, // NEED TO CHECK ON WIN /MAC ::DONE::
       titleBarStyle: 'hidden',
