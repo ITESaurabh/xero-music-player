@@ -1,6 +1,5 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { parseDir, parseMusic } from '../modules/FileParser';
-import { APP_CONF_FOLDER } from '../../config/core_config';
 
 function sendMessageToRendererProcess(window, message, payload) {
   window.webContents.send(message, payload);
@@ -141,17 +140,17 @@ export default function mainIpcs(mainWin) {
         if (!result.canceled) {
           const folderPath = result.filePaths[0];
 
-          pool
-            .exec('fibonacci', [10])
-            .then(function (result) {
-              console.log('Result: ' + result); // outputs 55
-            })
-            .catch(function (err) {
-              console.error(err);
-            })
-            .then(function () {
-              pool.terminate(); // terminate all workers when done
-            });
+          // pool
+          //   .exec('fibonacci', [10])
+          //   .then(function (result) {
+          //     console.log('Result: ' + result); // outputs 55
+          //   })
+          //   .catch(function (err) {
+          //     console.error(err);
+          //   })
+          //   .then(function () {
+          //     pool.terminate(); // terminate all workers when done
+          //   });
         }
         // if (result.canceled) {
         //   console.log('Dialog was canceled');
