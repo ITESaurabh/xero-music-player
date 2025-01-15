@@ -201,14 +201,7 @@ export default function PlayBar() {
             >
               <ShuffleRounded />
             </IconButton>
-            <IconButton
-              onClick={() =>
-                sendMessageToNode('open-db', {
-                  path: '%appdata%',
-                })
-              }
-              aria-label="repeat"
-            >
+            <IconButton onClick={() => sendMessageToNode('init-db')} aria-label="repeat">
               <RepeatRounded />
             </IconButton>
             <IconButton

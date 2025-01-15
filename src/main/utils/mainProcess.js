@@ -55,38 +55,62 @@ export default function mainIpcs(mainWin) {
     });
   });
 
-  ipcMain.on('open-db', (e, payload) => {
+  ipcMain.on('init-db', (e, payload) => {
     const db = require('../../database');
 
-    db.exec(`CREATE TABLE IF NOT EXISTS audio_files (
-         id INTEGER PRIMARY KEY AUTOINCREMENT,
-         tag_type,
-         path,
-         file_name,
-         file_ext,
-         file_size,
-         folder_name,
-         file_path,
-         title TEXT,
-         artist,
-         album,
-         track,
-         genre,
-         year,
-         album_art
+    db.exec(`CREATE TABLE IF NOT EXISTS Track (
+         Uri varchar COLLATE NOCASE,
+         Extension varchar,
+         Title varchar COLLATE UNICODE,
+         AlbumId integer,
+         ReleaseYear integer,
+         TrackNumber integer,
+         DiscNumber integer,
+         Duration integer,
+         FingerPrint varchar,
+         BitRate integer,
+         SampleRate integer,
+         Channels integer,
+         DateAdded bigint,
+         Id integer NOT NULL,
+         Version integer,
        )`);
-    // db.exec('CREATE TABLE IF NOT EXISTS audio_files (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)');
-    // const stmt = db.prepare('INSERT INTO users (name) VALUES (?)');
-    // const insertResult = stmt.run('John Doe', '2');
 
-    // if (insertResult.changes > 0) {
-    //    console.log('User added successfully');
-    // } else {
-    //    console.error('Failed to add user');
-    // }
+    db.exec(`CREATE TABLE IF NOT EXISTS Genre (
+         Name varchar COLLATE UNICODE,
+         Id integer NOT NULL,
+         Version integer,
+       )`);
 
-    // const users = db.prepare('SELECT * FROM users').all();
-    // console.log(users);
+    db.exec(`CREATE TABLE IF NOT EXISTS Artist (
+         Name varchar COLLATE UNICODE,
+         ProfileImgUri varchar,
+         Id integer NOT NULL,
+         Version integer,
+       )`);
+
+    db.exec(`CREATE TABLE IF NOT EXISTS Album (
+         Title varchar COLLATE UNICODE,
+         CoverUri varchar,
+         ArtistId integer,
+         GenreId integer,
+         ReleaseYear integer,
+         Duration integer,
+         Editable integer,
+         DateAdded bigint,
+         Id integer NOT NULL,
+         Version integer,
+       )`);
+
+    db.exec(`CREATE TABLE IF NOT EXISTS MusicFolder (
+         Uri varchar COLLATE NOCASE,
+         ParentFolderId integer,
+         Name varchar COLLATE UNICODE,
+         DateModified bigint,
+         ItemsCount integer,
+         Id integer NOT NULL,
+         Version integer,
+       )`);
   });
 
   ipcMain.on('process-files', (e, payload) => {
