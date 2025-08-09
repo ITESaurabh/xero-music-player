@@ -6,6 +6,7 @@ const initialState = {
   isMaximized: false,
   isMenuExpanded: false,
   path: null,
+  track: null,
   isPlaying: false,
   position: 0,
 };
@@ -36,8 +37,8 @@ const StateProvider = ({ children }) => {
       }
       case 'SET_CURR_TRACK': {
         return {
-          ...initialState,
-          path: action.payload.path,
+          ...state,
+          track: action.payload,
         };
       }
       case 'SET_IS_PLAYING': {

@@ -1,5 +1,10 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
 import { parseDir, parseMusic } from '../modules/FileParser';
+const db = require('../../database');
+const path = require('path');
+const fs = require('fs');
+const { fork } = require('child_process');
+const { APP_CONF_FOLDER, MUSIC_DIR, ALBUM_ART_DIR, ARTIST_ART_DIR } = require('../../config/core_config');
 
 function sendMessageToRendererProcess(window, message, payload) {
   window.webContents.send(message, payload);
@@ -55,64 +60,6 @@ export default function mainIpcs(mainWin) {
     });
   });
 
-  ipcMain.on('init-db', (e, payload) => {
-    const db = require('../../database');
-
-    db.exec(`CREATE TABLE IF NOT EXISTS Track (
-         Uri varchar COLLATE NOCASE,
-         Extension varchar,
-         Title varchar COLLATE UNICODE,
-         AlbumId integer,
-         ReleaseYear integer,
-         TrackNumber integer,
-         DiscNumber integer,
-         Duration integer,
-         FingerPrint varchar,
-         BitRate integer,
-         SampleRate integer,
-         Channels integer,
-         DateAdded bigint,
-         Id integer NOT NULL,
-         Version integer,
-       )`);
-
-    db.exec(`CREATE TABLE IF NOT EXISTS Genre (
-         Name varchar COLLATE UNICODE,
-         Id integer NOT NULL,
-         Version integer,
-       )`);
-
-    db.exec(`CREATE TABLE IF NOT EXISTS Artist (
-         Name varchar COLLATE UNICODE,
-         ProfileImgUri varchar,
-         Id integer NOT NULL,
-         Version integer,
-       )`);
-
-    db.exec(`CREATE TABLE IF NOT EXISTS Album (
-         Title varchar COLLATE UNICODE,
-         CoverUri varchar,
-         ArtistId integer,
-         GenreId integer,
-         ReleaseYear integer,
-         Duration integer,
-         Editable integer,
-         DateAdded bigint,
-         Id integer NOT NULL,
-         Version integer,
-       )`);
-
-    db.exec(`CREATE TABLE IF NOT EXISTS MusicFolder (
-         Uri varchar COLLATE NOCASE,
-         ParentFolderId integer,
-         Name varchar COLLATE UNICODE,
-         DateModified bigint,
-         ItemsCount integer,
-         Id integer NOT NULL,
-         Version integer,
-       )`);
-  });
-
   ipcMain.on('process-files', (e, payload) => {
     console.log(payload);
     const SongsPathList = parseDir(payload);
@@ -153,74 +100,176 @@ export default function mainIpcs(mainWin) {
   //    });
   // }
 
-  ipcMain.once('show-file-picker', async e => {
-    let myTracks = [];
-    await dialog
-      .showOpenDialog(mainWin, {
-        title: 'Select Music Folder',
-        properties: ['openDirectory'],
-      })
-      .then(result => {
-        if (!result.canceled) {
-          const folderPath = result.filePaths[0];
+  ipcMain.handle('scan-media', async e => {
+    // Get all music folders
+    const folders = db.prepare('SELECT * FROM MusicFolder').all();
+    if (!folders.length) return { success: false, error: 'No folders to scan' };
 
-          // pool
-          //   .exec('fibonacci', [10])
-          //   .then(function (result) {
-          //     console.log('Result: ' + result); // outputs 55
-          //   })
-          //   .catch(function (err) {
-          //     console.error(err);
-          //   })
-          //   .then(function () {
-          //     pool.terminate(); // terminate all workers when done
-          //   });
+    // Prepare config
+    const config = {
+      APP_CONF_FOLDER,
+      MUSIC_DIR,
+      ALBUM_ART_DIR,
+      ARTIST_ART_DIR
+    };
+
+    // Spawn a worker process for scanning
+    const worker = fork(path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js'));
+    worker.send({ folders, config });
+
+    return new Promise((resolve, reject) => {
+      worker.on('message', msg => {
+        if (msg.success) {
+          console.log(`Scanned ${msg.scanned} files successfully.`);
+          
+          resolve({ success: true, scanned: msg.scanned });
+        } else {
+          reject(msg.error);
         }
-        // if (result.canceled) {
-        //   console.log('Dialog was canceled');
-        // } else {
-        //   const folder = result.filePaths[0];
-        //   console.log(folder);
-
-        //   try {
-        //     const worker = new Worker('musicParserWorker.js');
-
-        //     worker.onmessage = function (event) {
-        //       console.log(event.data);
-        //     };
-        //     worker.postMessage(folder);
-
-        //     // const SongsPathList = parseDir(folder);
-        //     // SongsPathList.forEach(songPath => {
-        //     //   const SongInfo = parseMusic(songPath);
-        //     //   SongInfo.then(song => {
-        //     //     console.info('Info', song);
-        //     //   });
-        //     // });
-        //     // const checFun = async () => {};
-        //     // await checFun();
-        //     // const folderCont = fs
-        //     //    .readdirSync(folder)
-        //     //    .map(content => path.join(folder, content))
-        //     //    .map(content => path.parse(content))
-        //     //    .map(pathObject => {
-        //     //       const po = { name: pathObject.name, extension: pathObject.ext };
-        //     //       return po;
-        //     //    });
-        //     // const subFolders = folderCont
-        //     //    .filter(content => content.extension == '')
-        //     //    .map(subFolder => path.join(folder, subFolder.name));
-        //     // file;
-        //     // console.log(myList);
-        //     // console.log(subFolders);
-        //     // previewWin.loadURL(`file://${file}`);
-        //   } catch (e) {
-        //     console.log(e);
-        //   }
-        // }
-      })
-      .catch(err => {
-        console.log(err);
       });
+      worker.on('error', err => reject(err));
+      worker.on('exit', code => {
+        if (code !== 0) reject('Worker exited with code ' + code);
+      });
+    });
+  });
+
+  mainWin.webContents.on('before-input-event', (event, input) => {
+    if ((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') {
+      mainWin.webContents.openDevTools();
+      event.preventDefault();
+    }
+  });
+
+  db.prepare(
+    `CREATE TABLE IF NOT EXISTS Genre (
+         Id INTEGER PRIMARY KEY AUTOINCREMENT,
+         Name TEXT,
+         Version INTEGER
+       )`
+  ).run();
+
+  db.prepare(
+    `CREATE TABLE IF NOT EXISTS Artist (
+         Id INTEGER PRIMARY KEY AUTOINCREMENT,
+         Name TEXT,
+         ProfileImgUri TEXT,
+         Version INTEGER
+       )`
+  ).run();
+
+  db.prepare(
+    `CREATE TABLE IF NOT EXISTS Album (
+         Id INTEGER PRIMARY KEY AUTOINCREMENT,
+         Title TEXT,
+         CoverUri TEXT,
+         ArtistId INTEGER,
+         GenreId INTEGER,
+         ReleaseYear INTEGER,
+         Duration INTEGER,
+         Editable INTEGER,
+         DateAdded BIGINT,
+         Version INTEGER
+       )`
+  ).run();
+
+  db.prepare(
+    `CREATE TABLE IF NOT EXISTS MusicFolder (
+  Id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Uri TEXT NOT NULL,
+  Name TEXT,
+  DateModified INTEGER,
+  ItemsCount INTEGER,
+  Version INTEGER
+)`
+  ).run();
+
+  db.prepare(`
+  CREATE TABLE IF NOT EXISTS Track (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Uri TEXT,
+    Extension TEXT,
+    Title TEXT,
+    ArtistId INTEGER,
+    AlbumId INTEGER,
+    GenreId INTEGER,
+    TrackNumber TEXT,
+    Year TEXT,
+    AlbumArt TEXT,
+    FileHash TEXT,
+    Duration INTEGER,
+    BitRate INTEGER,
+    SampleRate INTEGER,
+    Channels INTEGER,
+    DiscNumber INTEGER,
+    ReleaseYear INTEGER,
+    DateAdded BIGINT,
+    Version INTEGER
+  )
+`).run();
+
+  ipcMain.handle('add-music-folder', async e => {
+    const result = await dialog.showOpenDialog(mainWin, {
+      title: 'Select Music Folder',
+      properties: ['openDirectory'],
+    });
+
+    if (result.canceled || !result.filePaths[0]) {
+      return { success: false, error: 'No folder selected' };
+    }
+
+    const folderPath = result.filePaths[0];
+    const folderName = path.basename(folderPath);
+    const stats = fs.statSync(folderPath);
+    const itemsCount = fs.readdirSync(folderPath).length;
+
+    const stmt = db.prepare(
+      'INSERT INTO MusicFolder (Uri, Name, DateModified, ItemsCount, Version) VALUES (?, ?, ?, ?, ?)'
+    );
+    stmt.run(folderPath, folderName, stats.mtimeMs, itemsCount, 1);
+
+    return {
+      success: true,
+      folder: {
+        Uri: folderPath,
+        Name: folderName,
+        DateModified: stats.mtimeMs,
+        ItemsCount: itemsCount,
+        Version: 1,
+      },
+    };
+  });
+
+  ipcMain.handle('get-music-folders', () => {
+    const rows = db.prepare('SELECT * FROM MusicFolder').all();
+    return rows;
+  });
+
+  ipcMain.handle('remove-music-folder', (e, { Id }) => {
+    const stmt = db.prepare('DELETE FROM MusicFolder WHERE Id = ?');
+    stmt.run(Id);
+    return { success: true };
+  });
+
+  ipcMain.handle('get-all-songs', () => {
+    return db.prepare(`
+      SELECT
+        Track.Id,
+        Track.Title,
+        Track.Uri,
+        Track.Extension,
+        Track.Year,
+        Track.TrackNumber,
+        Track.AlbumArt,
+        Track.Duration,
+        Artist.Name AS ArtistName,
+        Album.Title AS AlbumTitle,
+        Genre.Name AS GenreName
+      FROM Track
+      LEFT JOIN Artist ON Track.ArtistId = Artist.Id
+      LEFT JOIN Album ON Track.AlbumId = Album.Id
+      LEFT JOIN Genre ON Track.GenreId = Genre.Id
+      ORDER BY Track.Title COLLATE NOCASE
+    `).all();
   });
 }

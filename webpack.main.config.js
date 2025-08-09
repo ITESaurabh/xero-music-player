@@ -7,7 +7,7 @@ module.exports = {
    * that runs in the main process.
    */
   entry: './src/main.js',
-  externals: { 'react-native-fs': 'reactNativeFs' },
+  externals: { 'react-native-fs': 'reactNativeFs', 'better-sqlite3': 'commonjs better-sqlite3' },
   // Put your normal webpack config below here
   module: {
     rules: require('./webpack.rules'),
@@ -20,6 +20,10 @@ module.exports = {
       patterns: [
         {
           from: path.join(__dirname, 'src', 'loader.html'),
+          to: '.',
+        },
+        {
+          from: path.join(__dirname, 'src', 'main', 'utils', 'musicScanWorker.js'),
           to: '.',
         },
       ],

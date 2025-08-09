@@ -38,9 +38,17 @@ export const IpcProvider = ({ children }) => {
     };
   });
 
-  const sendMessageToMainProcess = (message, payload) => {
-    ipcRenderer.send(message, payload);
+  const sendEventToMainProcess = (event, payload) => {
+    ipcRenderer.send(event, payload);
   };
 
-  return <IpcContext.Provider value={{ sendMessageToMainProcess }}>{children}</IpcContext.Provider>;
+  const invokeEventToMainProcess = (event, payload) => {
+    return ipcRenderer.invoke(event, payload);
+  };
+
+  return (
+    <IpcContext.Provider value={{ sendEventToMainProcess, invokeEventToMainProcess }}>
+      {children}
+    </IpcContext.Provider>
+  );
 };

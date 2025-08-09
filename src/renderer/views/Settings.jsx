@@ -21,10 +21,22 @@ import PageToolbar from '../components/PageToolbar';
 import foldersIcon from '@iconify/icons-fluent/folder-24-regular';
 import syncIcon from '@iconify/icons-fluent/arrow-sync-24-regular';
 import addFolderIcon from '@iconify/icons-fluent/folder-add-24-regular';
+import { useIpc } from '../state/ipc';
 import { sendMessageToNode } from '../../main/utils/renProcess';
 
 const Settings = () => {
   const [expanded, setExpanded] = React.useState(false);
+  const [folders, setFolders] = React.useState([]);
+  const { invokeEventToMainProcess } = useIpc();
+
+  React.useEffect(() => {
+    invokeEventToMainProcess('get-music-folders')
+      .then(setFolders)
+      .catch(err => {
+        console.error('Error fetching music folders:', err);
+      });
+    // console.log(sendMessageToNode('get-music-folders'));
+  }, []);
 
   const handleExpansion = () => {
     setExpanded(prevExpanded => !prevExpanded);
@@ -46,6 +58,17 @@ const Settings = () => {
               variant="outlined"
               color="primary"
               fullWidth
+              onClick={() => {
+                invokeEventToMainProcess('scan-media')
+                  .then((data) => {
+                    console.log("Media scan completed:", data);
+                    
+                    invokeEventToMainProcess('get-music-folders').then(setFolders);
+                  })
+                  .catch(err => {
+                    console.error('Error rescanning media:', err);
+                  });
+              }}
             >
               Rescan Media
             </Button>
@@ -95,14 +118,51 @@ const Settings = () => {
                   disableElevation
                   size="small"
                   fullWidth
-                  onClick={() => sendMessageToNode('show-file-picker')}
+                  onClick={() =>
+                    invokeEventToMainProcess('add-music-folder')
+                      .then(res => {
+                        invokeEventToMainProcess('get-music-folders').then(setFolders);
+                      })
+                      .catch(err => {
+                        console.error('Error adding music folder:', err);
+                      })
+                  }
                   sx={{ mr: 2, maxWidth: 150 }}
                 >
                   Add Folder
                 </Button>
               </AccordionSummary>
               <AccordionDetails>
-                <Typography>No items</Typography>
+                {folders.length === 0 ? (
+                  <Typography>No items</Typography>
+                ) : (
+                  <>
+                    {folders.map(folder => (
+                      <ListItem
+                        key={folder.Id}
+                        secondaryAction={
+                          <Button
+                            color="error"
+                            variant="contained"
+                            size="small"
+                            disableElevation
+                            onClick={() => {
+                              invokeEventToMainProcess('remove-music-folder', {
+                                Id: folder.Id,
+                              }).then(() =>
+                                invokeEventToMainProcess('get-music-folders').then(setFolders)
+                              );
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        }
+                      >
+                        <ListItemText disableGutters primary={folder.Uri} />
+                      </ListItem>
+                    ))}
+                  </>
+                )}
               </AccordionDetails>
             </Accordion>
           </ListItem>

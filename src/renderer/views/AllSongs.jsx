@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   Table,
   Container,
@@ -16,6 +16,8 @@ import filterIcon from '@iconify/icons-fluent/filter-24-filled';
 import { Icon } from '@iconify/react';
 import PageToolbar from '../components/PageToolbar';
 import { Link } from 'react-router-dom';
+import { useIpc } from '../state/ipc';
+import { store } from '../utils/store';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -50,7 +52,16 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 const AllSongs = () => {
   const trigger1 = useScrollTrigger();
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
-  console.log(trigger1, 'awdaw');
+  const [songs, setSongs] = React.useState([]);
+  const { invokeEventToMainProcess } = useIpc();
+  const { state, dispatch } = useContext(store);
+
+  React.useEffect(() => {
+    invokeEventToMainProcess('get-all-songs')
+      .then(setSongs)
+      .catch(err => console.error('Error fetching songs:', err));
+  }, []);
+
   return (
     <>
       <PageToolbar
@@ -64,24 +75,34 @@ const AllSongs = () => {
       <Container maxWidth="xl">
         <Table>
           <TableBody>
-            {Array.from({ length: 50 }).map((item, index) => (
-              <StyledTableRow key={index}>
+            {songs.map((song, index) => (
+              <StyledTableRow
+                key={song.Id || index}
+                onClick={() =>
+                  dispatch({
+                    type: 'SET_CURR_TRACK',
+                    payload: song,
+                  })
+                }
+              >
                 <StyledTableCell component="th" scope="row">
-                  1x1 (feat. Nova Twins)
+                  {song.Title}
                 </StyledTableCell>
-                <StyledTableCell align="right">Bring Me The Horizon & Nova Twins</StyledTableCell>
+                <StyledTableCell align="right">{song.ArtistName || ''}</StyledTableCell>
                 {!isPhone && (
                   <>
                     <StyledTableCell align="right">
                       <CustomButton component={Link} to="/main_window/artists">
-                        POST HUMAN: SURVIVAL HORROR
+                        {song.AlbumTitle || ''}
                       </CustomButton>
                     </StyledTableCell>
-                    <StyledTableCell align="right">2020</StyledTableCell>
-                    <StyledTableCell align="right">Rock</StyledTableCell>
+                    <StyledTableCell align="right">{song.Year || ''}</StyledTableCell>
+                    <StyledTableCell align="right">{song.GenreName || ''}</StyledTableCell>
                   </>
                 )}
-                <StyledTableCell align="right">03:29</StyledTableCell>
+                <StyledTableCell align="right">
+                  {song.Duration ? song.Duration : ''}
+                </StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>
