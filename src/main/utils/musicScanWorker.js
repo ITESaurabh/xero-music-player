@@ -33,7 +33,8 @@ function parseMusicWorker(filePath, config) {
         track: '',
         genre: '',
         year: '',
-        albumArt: '',
+        albumArt: '', // will be set later
+        picture: null // keep raw picture for later
       },
     };
     jsmediatags.read(filePath, {
@@ -47,21 +48,8 @@ function parseMusicWorker(filePath, config) {
         music.tags.genre = tags.genre;
         music.tags.year = tags.year;
         if (tag && tags.picture && tags.picture.data) {
-          tags.picture.type = tags.picture.type ? tags.picture.type.replace(/image\//g, '') : 'jpg';
-          const albumArtPath = path.join(
-            config.ALBUM_ART_DIR,
-            `${music.tags.album ? music.tags.album : removeMIME(music.fileInfo.fileName)}.${'jpg'}`
-          );
-          const base64Img = arrayBuff2ImgBuff(tags.picture);
-          let m = base64Img.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-          if (m && m[2]) {
-            let b = Buffer.from(m[2], 'base64');
-            fs.writeFileSync(String(albumArtPath), b);
-            music.tags.albumArt = albumArtPath;
-          }
+          music.tags.picture = tags.picture;
         }
-        console.log(`Parsed music file: ${filePath}`);
-
         resolve(music);
       },
       onError: async function (error) {
@@ -140,9 +128,25 @@ process.on('message', async ({ folders, config }) => {
           const artistId = musicInfo.tags.artist ? getOrCreate(db, 'Artist', 'Name', musicInfo.tags.artist) : null;
           // Get or create Genre
           const genreId = musicInfo.tags.genre ? getOrCreate(db, 'Genre', 'Name', musicInfo.tags.genre) : null;
-          // Get or create Album
-          let albumArt = musicInfo.tags.albumArt;
-          const albumId = musicInfo.tags.album ? getOrCreate(db, 'Album', 'Title', musicInfo.tags.album, { CoverUri: albumArt, ArtistId: artistId, GenreId: genreId }) : null;
+          // Get or create Album (get albumId first)
+          let albumId = null;
+          if (musicInfo.tags.album) {
+            albumId = getOrCreate(db, 'Album', 'Title', musicInfo.tags.album, { ArtistId: artistId, GenreId: genreId });
+          }
+          // Save album art using albumId as file name
+          let albumArt = '';
+          if (albumId && musicInfo.tags.picture) {
+            const albumArtPath = path.join(config.ALBUM_ART_DIR, `${albumId}.jpg`);
+            if (!fs.existsSync(albumArtPath)) {
+              const base64Img = arrayBuff2ImgBuff(musicInfo.tags.picture);
+              const base64Data = base64Img.split(',')[1];
+              if (base64Data) {
+                let b = Buffer.from(base64Data, 'base64');
+                fs.writeFileSync(String(albumArtPath), b);
+              }
+            }
+            albumArt = albumArtPath;
+          }
           const trackRow = db.prepare('SELECT * FROM Track WHERE Uri = ?').get(filePath);
           let trackTitle = musicInfo.tags.title && musicInfo.tags.title.trim() ? musicInfo.tags.title : musicInfo.fileInfo.fileName;
           if (!trackRow) {

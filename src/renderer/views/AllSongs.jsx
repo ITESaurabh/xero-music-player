@@ -10,6 +10,7 @@ import {
   Button,
   useMediaQuery,
   ButtonBase,
+  ListItemButton,
 } from '@mui/material';
 import useScrollTrigger from '@mui/material/useScrollTrigger';
 import filterIcon from '@iconify/icons-fluent/filter-24-filled';
@@ -18,6 +19,8 @@ import PageToolbar from '../components/PageToolbar';
 import { Link } from 'react-router-dom';
 import { useIpc } from '../state/ipc';
 import { store } from '../utils/store';
+import { Typography } from '@mui/material';
+import { QUERY_KEYS } from '../constants/queryKeys';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -39,9 +42,9 @@ const CustomButton = styled(ButtonBase)(({ theme }) => ({
   },
 }));
 
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
+const StyledTableRow = styled(TableRow)(({ theme, selected }) => ({
   '&:nth-of-type(odd)': {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor: selected ? undefined : theme.palette.action.hover,
   },
   // hide last border
   '&:last-child td, &:last-child th': {
@@ -73,10 +76,11 @@ const AllSongs = () => {
         }
       />
       <Container maxWidth="xl">
-        <Table>
+        <Table size="small">
           <TableBody>
             {songs.map((song, index) => (
               <StyledTableRow
+                component={ListItemButton}
                 key={song.Id || index}
                 onClick={() =>
                   dispatch({
@@ -84,24 +88,70 @@ const AllSongs = () => {
                     payload: song,
                   })
                 }
+                selected={state.track?.Id === song.Id}
               >
                 <StyledTableCell component="th" scope="row">
-                  {song.Title}
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 180 }}
+                  >
+                    {song.Title}
+                  </Typography>
                 </StyledTableCell>
-                <StyledTableCell align="right">{song.ArtistName || ''}</StyledTableCell>
+                <StyledTableCell align="right">
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 140 }}
+                  >
+                    {song.ArtistName || ''}
+                  </Typography>
+                </StyledTableCell>
                 {!isPhone && (
                   <>
                     <StyledTableCell align="right">
-                      <CustomButton component={Link} to="/main_window/artists">
-                        {song.AlbumTitle || ''}
+                      <CustomButton
+                        component={Link}
+                        to="/main_window/artists"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 140 }}
+                        >
+                          {song.AlbumTitle || ''}
+                        </Typography>
                       </CustomButton>
                     </StyledTableCell>
-                    <StyledTableCell align="right">{song.Year || ''}</StyledTableCell>
-                    <StyledTableCell align="right">{song.GenreName || ''}</StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 80 }}
+                      >
+                        {song.Year || ''}
+                      </Typography>
+                    </StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 100 }}
+                      >
+                        {song.GenreName || ''}
+                      </Typography>
+                    </StyledTableCell>
                   </>
                 )}
                 <StyledTableCell align="right">
-                  {song.Duration ? song.Duration : ''}
+                  <Typography
+                    noWrap
+                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 60 }}
+                  >
+                    {song.Duration ? song.Duration : ''}
+                  </Typography>
                 </StyledTableCell>
               </StyledTableRow>
             ))}

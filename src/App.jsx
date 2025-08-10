@@ -2,14 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { store } from './renderer/utils/store';
 import { getTheme } from './renderer/utils/LocStoreUtil';
 import { useRoutes } from 'react-router-dom';
-import {
-  createTheme,
-  Box,
-  CssBaseline,
-  responsiveFontSizes,
-  ThemeProvider,
-  CircularProgress,
-} from '@mui/material';
+import { createTheme, CssBaseline, responsiveFontSizes, ThemeProvider } from '@mui/material';
 import routes from './renderer/utils/routes';
 // import '@fontsource/open-sans/300.css';
 // import '@fontsource/open-sans/400.css';
@@ -18,6 +11,9 @@ import routes from './renderer/utils/routes';
 import { getBaseTheme } from './config/theme';
 import { ipcRenderer } from 'electron';
 import Titlebar from './renderer/components/Titlebar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 const App = () => {
   const { _state, dispatch } = useContext(store);
@@ -50,11 +46,13 @@ const App = () => {
   }, [currTheme, dispatch]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Titlebar />
-      {element}
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Titlebar />
+        {element}
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 
