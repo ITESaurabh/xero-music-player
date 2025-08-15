@@ -204,7 +204,8 @@ export default function mainIpcs(mainWin) {
     DiscNumber INTEGER,
     ReleaseYear INTEGER,
     DateAdded BIGINT,
-    Version INTEGER
+    Version INTEGER,
+    FolderPath TEXT
   )
 `).run();
 

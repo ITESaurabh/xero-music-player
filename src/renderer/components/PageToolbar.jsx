@@ -9,13 +9,14 @@ function PageToolbar({ title, action }) {
       position="sticky"
       color="transparent"
       sx={{
+        borderRadius: 10,
         backgroundColor: theme.palette.mode === 'dark' ? '#323135' : theme.palette.background.paper,
       }}
       elevation={0}
     >
-      <Toolbar sx={{ py: '1.5rem', px: '2rem', justifyContent: 'space-between' }} disableGutters>
+      <Toolbar sx={{ py: '1rem', px: '2rem', justifyContent: 'space-between' }} disableGutters>
         <Typography
-          variant="h3"
+          variant="h4"
           sx={{
             fontFamily: 'Roboto',
             fontStyle: 'normal',

@@ -1,36 +1,24 @@
 import React, { useContext } from 'react';
 import {
-  Table,
   Container,
   styled,
-  TableCell,
-  TableBody,
-  TableRow,
-  tableCellClasses,
   Button,
   useMediaQuery,
   ButtonBase,
   ListItemButton,
+  Box,
+  Grid,
 } from '@mui/material';
-import useScrollTrigger from '@mui/material/useScrollTrigger';
 import filterIcon from '@iconify/icons-fluent/filter-24-filled';
 import { Icon } from '@iconify/react';
 import PageToolbar from '../components/PageToolbar';
-import { Link } from 'react-router-dom';
 import { useIpc } from '../state/ipc';
 import { store } from '../utils/store';
 import { Typography } from '@mui/material';
 import { QUERY_KEYS } from '../constants/queryKeys';
-
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: theme.palette.common.black,
-    color: theme.palette.common.white,
-  },
-  [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
-  },
-}));
+import { useQuery } from '@tanstack/react-query';
+import { FixedSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 const CustomButton = styled(ButtonBase)(({ theme }) => ({
   padding: 5,
@@ -42,31 +30,116 @@ const CustomButton = styled(ButtonBase)(({ theme }) => ({
   },
 }));
 
-const StyledTableRow = styled(TableRow)(({ theme, selected }) => ({
-  '&:nth-of-type(odd)': {
-    backgroundColor: selected ? undefined : theme.palette.action.hover,
-  },
-  // hide last border
-  '&:last-child td, &:last-child th': {
-    border: 0,
-  },
-}));
+const columns = [
+  { label: 'Title', key: 'Title', width: 180 },
+  { label: 'Artist', key: 'ArtistName', width: 140 },
+  { label: 'Album', key: 'AlbumTitle', width: 140 },
+  { label: 'Year', key: 'Year', width: 80 },
+  { label: 'Genre', key: 'GenreName', width: 100 },
+  { label: 'Duration', key: 'Duration', width: 60 },
+];
+
+const getVisibleColumns = isPhone => (isPhone ? columns.slice(0, 2) : columns);
+
+const getFlex = (col, isPhone) => {
+  if (isPhone) return 1;
+  if (col.label === 'Title') return 2;
+  return 1;
+};
+
+const HeaderRow = ({ isPhone }) => {
+  const visibleColumns = getVisibleColumns(isPhone);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        width: '100%',
+        background: '#222',
+        color: '#fff',
+        fontWeight: 500,
+      }}
+    >
+      {visibleColumns.map(col => (
+        <div
+          key={col.label}
+          style={{
+            flex: getFlex(col, isPhone),
+            padding: '8px 16px',
+            textAlign: col.label === 'Title' ? 'left' : 'right',
+            minWidth: col.width,
+          }}
+        >
+          {col.label}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const AllSongs = () => {
-  const trigger1 = useScrollTrigger();
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
-  const [songs, setSongs] = React.useState([]);
   const { invokeEventToMainProcess } = useIpc();
-  const { state, dispatch } = useContext(store);
+  const { dispatch, state } = useContext(store);
 
-  React.useEffect(() => {
-    invokeEventToMainProcess('get-all-songs')
-      .then(setSongs)
-      .catch(err => console.error('Error fetching songs:', err));
-  }, []);
+  const {
+    data: songs = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: [QUERY_KEYS.ALL_SONGS],
+    queryFn: () => invokeEventToMainProcess('get-all-songs'),
+  });
+
+  const Row = React.useCallback(
+    ({ index, style }) => {
+      const song = songs[index];
+      const visibleColumns = getVisibleColumns(isPhone);
+
+      return (
+        <ListItemButton
+          style={style}
+          selected={song.Id === state.track?.Id}
+          sx={{
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            borderBottom: '1px solid #333',
+            background: index % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
+            '&:hover': {
+              background: 'rgba(255,255,255,0.08)',
+            },
+          }}
+          key={song.Id || index}
+          onClick={() => dispatch({ type: 'SET_CURR_TRACK', payload: song })}
+        >
+          {visibleColumns.map(col => (
+            <Box
+              key={col.label}
+              sx={{
+                flex: getFlex(col, isPhone),
+                px: 2,
+                textAlign: col.label === 'Title' ? 'left' : 'right',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              <Typography variant="body2" noWrap>
+                {song[col.key] || ''}
+              </Typography>
+            </Box>
+          ))}
+        </ListItemButton>
+      );
+    },
+    [songs, dispatch, isPhone, state.track?.Id]
+  );
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error fetching songs</div>;
 
   return (
-    <>
+    <Grid item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <PageToolbar
         title="All Songs"
         action={
@@ -75,90 +148,22 @@ const AllSongs = () => {
           </Button>
         }
       />
-      <Container maxWidth="xl">
-        <Table size="small">
-          <TableBody>
-            {songs.map((song, index) => (
-              <StyledTableRow
-                component={ListItemButton}
-                key={song.Id || index}
-                onClick={() =>
-                  dispatch({
-                    type: 'SET_CURR_TRACK',
-                    payload: song,
-                  })
-                }
-                selected={state.track?.Id === song.Id}
-              >
-                <StyledTableCell component="th" scope="row">
-                  <Typography
-                    variant="body2"
-                    noWrap
-                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 180 }}
-                  >
-                    {song.Title}
-                  </Typography>
-                </StyledTableCell>
-                <StyledTableCell align="right">
-                  <Typography
-                    variant="body2"
-                    noWrap
-                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 140 }}
-                  >
-                    {song.ArtistName || ''}
-                  </Typography>
-                </StyledTableCell>
-                {!isPhone && (
-                  <>
-                    <StyledTableCell align="right">
-                      <CustomButton
-                        component={Link}
-                        to="/main_window/artists"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <Typography
-                          variant="body2"
-                          noWrap
-                          sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 140 }}
-                        >
-                          {song.AlbumTitle || ''}
-                        </Typography>
-                      </CustomButton>
-                    </StyledTableCell>
-                    <StyledTableCell align="right">
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 80 }}
-                      >
-                        {song.Year || ''}
-                      </Typography>
-                    </StyledTableCell>
-                    <StyledTableCell align="right">
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 100 }}
-                      >
-                        {song.GenreName || ''}
-                      </Typography>
-                    </StyledTableCell>
-                  </>
-                )}
-                <StyledTableCell align="right">
-                  <Typography
-                    noWrap
-                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 60 }}
-                  >
-                    {song.Duration ? song.Duration : ''}
-                  </Typography>
-                </StyledTableCell>
-              </StyledTableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <Container
+        maxWidth="xl"
+        sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+      >
+        <HeaderRow isPhone={isPhone} />
+        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <AutoSizer>
+            {({ height, width }) => (
+              <FixedSizeList height={height} itemCount={songs.length} itemSize={43} width={width}>
+                {Row}
+              </FixedSizeList>
+            )}
+          </AutoSizer>
+        </Box>
       </Container>
-    </>
+    </Grid>
   );
 };
 

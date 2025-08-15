@@ -34,7 +34,7 @@ function parseMusicWorker(filePath, config) {
         genre: '',
         year: '',
         albumArt: '', // will be set later
-        picture: null // keep raw picture for later
+        picture: null, // keep raw picture for later
       },
     };
     jsmediatags.read(filePath, {
@@ -68,7 +68,9 @@ function parseMusicWorker(filePath, config) {
             const picture = metadata.common.picture[0];
             const albumArtPath = path.join(
               config.ALBUM_ART_DIR,
-              `${music.tags.album ? music.tags.album : removeMIME(music.fileInfo.fileName)}.${picture.format || 'jpg'}`
+              `${music.tags.album ? music.tags.album : removeMIME(music.fileInfo.fileName)}.${
+                picture.format || 'jpg'
+              }`
             );
             fs.writeFileSync(String(albumArtPath), Buffer.from(picture.data));
             music.tags.albumArt = albumArtPath;
@@ -103,9 +105,26 @@ function getFileHash(filePath) {
   });
 }
 
+function getAllSupportedFiles(dir, supportedFileTypes) {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  for (const file of list) {
+    const filePath = path.join(dir, file);
+    if (fs.statSync(filePath).isDirectory()) {
+      results = results.concat(getAllSupportedFiles(filePath, supportedFileTypes));
+    } else {
+      const ext = path.extname(filePath).toLowerCase();
+      if (supportedFileTypes.includes(ext)) {
+        results.push(filePath);
+      }
+    }
+  }
+  return results;
+}
+
 process.on('message', async ({ folders, config }) => {
-    console.log('Starting music scan worker...');
-    
+  console.log('Starting music scan worker...');
+
   const dbPath = path.join(config.APP_CONF_FOLDER, 'data.db');
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
@@ -113,25 +132,29 @@ process.on('message', async ({ folders, config }) => {
   const supportedFileTypes = ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.m4a'];
   try {
     for (const folder of folders) {
-      const files = fs.readdirSync(folder.Uri);
-      const supportedFiles = files.filter(file => {
-        const ext = path.extname(file).toLowerCase();
-        return supportedFileTypes.includes(ext) && fs.statSync(path.join(folder.Uri, file)).isFile();
-      });
+      // Do NOT add subdirectories to MusicFolder
+      // Just scan files and set Track.folderpath
+      const supportedFiles = getAllSupportedFiles(folder.Uri, supportedFileTypes);
       let folderScanned = 0;
-      for (const file of supportedFiles) {
-        const filePath = path.join(folder.Uri, file);
+      for (const filePath of supportedFiles) {
         try {
           const fileHash = await getFileHash(filePath);
           const musicInfo = await parseMusicWorker(filePath, config);
           // Get or create Artist
-          const artistId = musicInfo.tags.artist ? getOrCreate(db, 'Artist', 'Name', musicInfo.tags.artist) : null;
+          const artistId = musicInfo.tags.artist
+            ? getOrCreate(db, 'Artist', 'Name', musicInfo.tags.artist)
+            : null;
           // Get or create Genre
-          const genreId = musicInfo.tags.genre ? getOrCreate(db, 'Genre', 'Name', musicInfo.tags.genre) : null;
+          const genreId = musicInfo.tags.genre
+            ? getOrCreate(db, 'Genre', 'Name', musicInfo.tags.genre)
+            : null;
           // Get or create Album (get albumId first)
           let albumId = null;
           if (musicInfo.tags.album) {
-            albumId = getOrCreate(db, 'Album', 'Title', musicInfo.tags.album, { ArtistId: artistId, GenreId: genreId });
+            albumId = getOrCreate(db, 'Album', 'Title', musicInfo.tags.album, {
+              ArtistId: artistId,
+              GenreId: genreId,
+            });
           }
           // Save album art using albumId as file name
           let albumArt = '';
@@ -147,12 +170,17 @@ process.on('message', async ({ folders, config }) => {
             }
             albumArt = albumArtPath;
           }
+          // Ensure folderpath is set for each track
+          const folderpath = path.parse(filePath).dir;
           const trackRow = db.prepare('SELECT * FROM Track WHERE Uri = ?').get(filePath);
-          let trackTitle = musicInfo.tags.title && musicInfo.tags.title.trim() ? musicInfo.tags.title : musicInfo.fileInfo.fileName;
+          let trackTitle =
+            musicInfo.tags.title && musicInfo.tags.title.trim()
+              ? musicInfo.tags.title
+              : musicInfo.fileInfo.fileName;
           if (!trackRow) {
             db.prepare(
-              `INSERT INTO Track (Uri, Extension, Title, ArtistId, AlbumId, GenreId, TrackNumber, Year, AlbumArt, FileHash, DateAdded, Version)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              `INSERT INTO Track (Uri, Extension, Title, ArtistId, AlbumId, GenreId, TrackNumber, Year, AlbumArt, FileHash, DateAdded, Version, FolderPath)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             ).run(
               filePath,
               musicInfo.fileInfo.fileExt,
@@ -165,13 +193,14 @@ process.on('message', async ({ folders, config }) => {
               albumArt,
               fileHash,
               Date.now(),
-              1
+              1,
+              folderpath
             );
             scanned++;
             folderScanned++;
           } else if (trackRow.FileHash !== fileHash) {
             db.prepare(
-              `UPDATE Track SET Extension = ?, Title = ?, ArtistId = ?, AlbumId = ?, GenreId = ?, TrackNumber = ?, Year = ?, AlbumArt = ?, FileHash = ?, DateAdded = ?, Version = ? WHERE Id = ?`
+              `UPDATE Track SET Extension = ?, Title = ?, ArtistId = ?, AlbumId = ?, GenreId = ?, TrackNumber = ?, Year = ?, AlbumArt = ?, FileHash = ?, DateAdded = ?, Version = ?, FolderPath = ? WHERE Id = ?`
             ).run(
               musicInfo.fileInfo.fileExt,
               trackTitle,
@@ -184,6 +213,7 @@ process.on('message', async ({ folders, config }) => {
               fileHash,
               Date.now(),
               1,
+              folderpath,
               trackRow.Id
             );
             scanned++;
@@ -193,20 +223,16 @@ process.on('message', async ({ folders, config }) => {
           console.error('DB Insert/Update Error:', err);
         }
       }
-      console.log(`Scanned ${folderScanned} out of ${supportedFiles.length} files in folder: ${folder.Uri}`);
+      console.log(
+        `Scanned ${folderScanned} out of ${supportedFiles.length} files in folder: ${folder.Uri}`
+      );
     }
     process.send({ success: true, scanned });
     // Remove tracks whose files are not in any current MusicFolder
-    const validPaths = [];
+    let validPaths = [];
     for (const folder of folders) {
-      const files = fs.readdirSync(folder.Uri);
-      for (const file of files) {
-        const filePath = path.join(folder.Uri, file);
-        const ext = path.extname(filePath).toLowerCase();
-        if (fs.statSync(filePath).isFile() && supportedFileTypes.includes(ext)) {
-          validPaths.push(filePath);
-        }
-      }
+      // Recursively get all supported files for validPaths
+      validPaths = validPaths.concat(getAllSupportedFiles(folder.Uri, supportedFileTypes));
     }
     const allTracks = db.prepare('SELECT Id, Uri FROM Track').all();
     let removed = 0;
@@ -220,9 +246,15 @@ process.on('message', async ({ folders, config }) => {
       console.log(`Removed ${removed} tracks not in any current MusicFolder.`);
     }
     // Clean up orphaned Album, Artist, Genre
-    db.prepare('DELETE FROM Album WHERE Id NOT IN (SELECT AlbumId FROM Track WHERE AlbumId IS NOT NULL)').run();
-    db.prepare('DELETE FROM Artist WHERE Id NOT IN (SELECT ArtistId FROM Track WHERE ArtistId IS NOT NULL)').run();
-    db.prepare('DELETE FROM Genre WHERE Id NOT IN (SELECT GenreId FROM Track WHERE GenreId IS NOT NULL)').run();
+    db.prepare(
+      'DELETE FROM Album WHERE Id NOT IN (SELECT AlbumId FROM Track WHERE AlbumId IS NOT NULL)'
+    ).run();
+    db.prepare(
+      'DELETE FROM Artist WHERE Id NOT IN (SELECT ArtistId FROM Track WHERE ArtistId IS NOT NULL)'
+    ).run();
+    db.prepare(
+      'DELETE FROM Genre WHERE Id NOT IN (SELECT GenreId FROM Track WHERE GenreId IS NOT NULL)'
+    ).run();
   } catch (error) {
     process.send({ success: false, error: error.message });
   }

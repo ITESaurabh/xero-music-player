@@ -190,7 +190,7 @@ export default function PlayBar() {
     return null;
   }
   return (
-    <Box sx={{ px: isPhone ? 0 : '1.5rem' }}>
+    <Box sx={{ px: isPhone ? 0 : '1.5rem', flex: 1 }}>
       <Grid
         container
         sx={{

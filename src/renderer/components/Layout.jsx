@@ -55,7 +55,6 @@ function Layout() {
           variant={isPhone ? 'temporary' : 'permanent'}
           sx={{
             height: '100%',
-            overflow: 'hidden',
             '&::-webkit-scrollbar': { display: 'none' },
             msOverflowStyle: 'none',
           }}
@@ -63,7 +62,6 @@ function Layout() {
             style: {
               paddingTop: '32px',
               backgroundColor: 'transparent',
-              overflow: 'hidden',
               borderRight: 'none',
               '&::-webkit-scrollbar': { display: 'none' },
               msOverflowStyle: 'none',
@@ -73,12 +71,12 @@ function Layout() {
         >
           <MainDrawer />
         </Drawer>
-        <Stack height={'100%'} width={'100%'}>
-          <Box height="32px">&npsb;</Box>
+        <Stack sx={{ height: '100%', width: '100%', flex: 1, position: 'relative', minWidth: 0 }}>
+          <Box height="32px">&nbsp;</Box>
           <Grid
             component={Paper}
             borderRadius={'0.5rem 0rem 0rem 0.5rem'}
-            height={'100%'}
+            sx={{ height: '100%', flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, p: 0, m: 0 }}
             container
           >
             <Grid
@@ -86,16 +84,42 @@ function Layout() {
               sx={{
                 height: '100%',
                 maxHeight: 'calc(100vh - 32px)',
-                overflowY: 'auto',
                 borderTopLeftRadius: '0.5rem',
+                flex: 1,
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
+                p: 0,
+                m: 0,
               }}
             >
               <Outlet />
             </Grid>
-            <Box sx={{ mt: '-11.5rem', zIndex: 1, width: '100%' }}>
+          </Grid>
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 20,
+              zIndex: 10,
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+            }}
+          >
+            <Box
+              sx={{
+                width: '100%',
+                margin: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
               <PlayBar />
             </Box>
-          </Grid>
+          </Box>
         </Stack>
       </Box>
     </Box>
