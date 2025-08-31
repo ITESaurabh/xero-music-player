@@ -90,6 +90,18 @@ const AllSongs = () => {
     queryFn: () => invokeEventToMainProcess('get-all-songs'),
   });
 
+  const handleSongClick = React.useCallback(
+    clickedIndex => {
+      dispatch({
+        type: 'SET_QUEUE',
+        payload: { queue: songs, index: clickedIndex },
+      });
+      dispatch({ type: 'SET_CURR_TRACK', payload: songs[clickedIndex] });
+      dispatch({ type: 'SET_IS_PLAYING', payload: true });
+    },
+    [songs, dispatch]
+  );
+
   const Row = React.useCallback(
     ({ index, style }) => {
       const song = songs[index];
@@ -110,7 +122,7 @@ const AllSongs = () => {
             },
           }}
           key={song.Id || index}
-          onClick={() => dispatch({ type: 'SET_CURR_TRACK', payload: song })}
+          onClick={() => handleSongClick(index)}
         >
           {visibleColumns.map(col => (
             <Box
@@ -132,7 +144,7 @@ const AllSongs = () => {
         </ListItemButton>
       );
     },
-    [songs, dispatch, isPhone, state.track?.Id]
+    [songs, dispatch, isPhone, state.track?.Id, handleSongClick]
   );
 
   if (isLoading) return <div>Loading...</div>;

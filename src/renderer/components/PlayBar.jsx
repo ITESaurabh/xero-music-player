@@ -68,6 +68,8 @@ export default function PlayBar() {
   let defaultVol = getVolumeLevel();
   const [volume, setVolume] = useState(defaultVol);
   const [lastVolume, setLastVolume] = useState(defaultVol > 0 ? defaultVol : 30);
+  const [isLoop, setIsLoop] = useState(state.isLoop);
+  const [isShuffle, setIsShuffle] = useState(state.isShuffle);
 
   useEffect(() => {
     if (state?.track) {
@@ -177,6 +179,34 @@ export default function PlayBar() {
     };
   }, [audioRef, isSeeking, state?.track]);
 
+  useEffect(() => {
+    setIsLoop(state.isLoop);
+    setIsShuffle(state.isShuffle);
+  }, [state.isLoop, state.isShuffle]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.onended = () => {
+        if (state.queue && state.queue.length > 0) {
+          if (state.queueIndex < state.queue.length - 1) {
+            dispatch({ type: 'NEXT_TRACK' });
+          } else if (isLoop) {
+            dispatch({ type: 'NEXT_TRACK' });
+          } else {
+            setPaused(true);
+          }
+        }
+      };
+    }
+  }, [state.queue, state.queueIndex, isLoop, dispatch]);
+
+  const handleShuffle = () => {
+    dispatch({ type: 'SET_SHUFFLE', payload: !isShuffle });
+  };
+  const handleLoop = () => {
+    dispatch({ type: 'SET_LOOP', payload: !isLoop });
+  };
+
   function formatDuration(value) {
     const minute = Math.floor(value / 60);
     const secondLeft = Math.floor(value - minute * 60);
@@ -185,6 +215,83 @@ export default function PlayBar() {
   const mainIconColor = theme.palette.mode === 'dark' ? '#fff' : '#000';
   const lightIconColor =
     theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+
+  // Long press logic for skip buttons
+  const longPressTimeout = useRef();
+  const longPressInterval = useRef();
+  const handlePrevPress = () => {
+    dispatch({ type: 'PREV_TRACK' });
+  };
+  const handleNextPress = () => {
+    dispatch({ type: 'NEXT_TRACK' });
+  };
+  const handlePrevLongPress = () => {
+    handlePrevLongPressAction();
+    longPressInterval.current = setInterval(handlePrevLongPressAction, 500);
+  };
+  const handleNextLongPress = () => {
+    handleNextLongPressAction();
+    longPressInterval.current = setInterval(handleNextLongPressAction, 500);
+  };
+  const handlePrevLongPressAction = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
+      setIsSeeking(false);
+    }
+  };
+  const handleNextLongPressAction = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 15);
+      setIsSeeking(false);
+    }
+  };
+
+  const clearLongPress = (callback) => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+    if (longPressInterval.current) {
+      clearInterval(longPressInterval.current);
+      longPressInterval.current = null;
+    }
+    if (callback) callback();
+  };
+
+  const prevButtonEvents = {
+    onMouseDown: () => {
+      longPressTimeout.current = setTimeout(handlePrevLongPress, 500);
+    },
+    onMouseUp: () => {
+      clearLongPress(handlePrevPress);
+    },
+    onMouseLeave: () => {
+      clearLongPress();
+    },
+    onTouchStart: () => {
+      longPressTimeout.current = setTimeout(handlePrevLongPress, 500);
+    },
+    onTouchEnd: () => {
+      clearLongPress(handlePrevPress);
+    },
+  };
+  const nextButtonEvents = {
+    onMouseDown: () => {
+      longPressTimeout.current = setTimeout(handleNextLongPress, 500);
+    },
+    onMouseUp: () => {
+      clearLongPress(handleNextPress);
+    },
+    onMouseLeave: () => {
+      clearLongPress();
+    },
+    onTouchStart: () => {
+      longPressTimeout.current = setTimeout(handleNextLongPress, 500);
+    },
+    onTouchEnd: () => {
+      clearLongPress(handleNextPress);
+    },
+  };
 
   if (!state?.track) {
     return null;
@@ -304,10 +411,7 @@ export default function PlayBar() {
               <IconButton
                 aria-label="previous song"
                 sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
-                onClick={() => {
-                  audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
-                  setIsSeeking(false);
-                }}
+                {...prevButtonEvents}
               >
                 <FastRewindRounded fontSize="large" htmlColor={mainIconColor} />
               </IconButton>
@@ -325,13 +429,7 @@ export default function PlayBar() {
               <IconButton
                 aria-label="next song"
                 sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
-                onClick={() => {
-                  audioRef.current.currentTime = Math.min(
-                    duration,
-                    audioRef.current.currentTime + 15
-                  );
-                  setIsSeeking(false);
-                }}
+                {...nextButtonEvents}
               >
                 <FastForwardRounded fontSize="large" htmlColor={mainIconColor} />
               </IconButton>
@@ -407,17 +505,10 @@ export default function PlayBar() {
         </Grid>
         <Grid xs={1} direction="row">
           <Box m={2}>
-            <IconButton
-              onClick={() =>
-                sendMessageToNode('open-dir', {
-                  path: '%appdata%',
-                })
-              }
-              aria-label="shuffle"
-            >
+            <IconButton onClick={handleShuffle} aria-label="shuffle">
               <ShuffleRounded />
             </IconButton>
-            <IconButton onClick={() => null} aria-label="repeat">
+            <IconButton onClick={handleLoop} aria-label="repeat">
               <RepeatRounded />
             </IconButton>
             <IconButton onClick={() => null} aria-label="discord visibility">
