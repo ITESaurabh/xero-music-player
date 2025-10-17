@@ -138,7 +138,9 @@ export default function MiniPlayerView() {
   useEffect(() => {
     if (path) {
       const audioElement = audioRef.current;
-      audioElement.src = path;
+      // Convert file path to file:// URL for proper audio loading
+      const fileUrl = `file://${path.replace(/\\/g, '/')}`;
+      audioElement.src = fileUrl;
 
       const res = parseMusic(path);
 

@@ -80,7 +80,9 @@ export default function PlayBar() {
 
   useEffect(() => {
     if (audioRef.current && songPath) {
-      audioRef.current.src = songPath;
+      // Convert file path to file:// URL for proper audio loading
+      const fileUrl = `file://${songPath.replace(/\\/g, '/')}`;
+      audioRef.current.src = fileUrl;
       audioRef.current.volume = defaultVol / 100;
       audioRef.current.play();
       setPaused(false);
