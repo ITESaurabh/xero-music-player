@@ -7,7 +7,10 @@ module.exports = {
    * that runs in the main process.
    */
   entry: './src/main.js',
-  externals: { 'react-native-fs': 'reactNativeFs', 'better-sqlite3': 'commonjs better-sqlite3' },
+  externals: {
+    'react-native-fs': 'reactNativeFs',
+    ...(process.env.NODE_ENV === 'development' && { 'better-sqlite3': 'commonjs better-sqlite3' }),
+  },
   // Put your normal webpack config below here
   module: {
     rules: require('./webpack.rules'),
