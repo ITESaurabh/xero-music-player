@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useRef, useEffect } from 'react';
 import {
   Container,
   styled,
@@ -19,16 +19,6 @@ import { QUERY_KEYS } from '../constants/queryKeys';
 import { useQuery } from '@tanstack/react-query';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-
-const CustomButton = styled(ButtonBase)(({ theme }) => ({
-  padding: 5,
-  borderRadius: theme.shape.borderRadius,
-  transition: 'background-color 0.1s ease-in-out',
-  [':hover']: {
-    color: theme.palette.primary.main,
-    backgroundColor: theme.palette.action.hover,
-  },
-}));
 
 const columns = [
   { label: 'Title', key: 'Title', width: 180 },
@@ -80,6 +70,7 @@ const AllSongs = () => {
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   const { invokeEventToMainProcess } = useIpc();
   const { dispatch, state } = useContext(store);
+  const lastScrollTop = useRef(0);
 
   const {
     data: songs = [],
@@ -89,6 +80,33 @@ const AllSongs = () => {
     queryKey: [QUERY_KEYS.ALL_SONGS],
     queryFn: () => invokeEventToMainProcess('get-all-songs'),
   });
+
+  // Show player bar when component mounts or unmounts
+  useEffect(() => {
+    dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
+    return () => {
+      dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
+    };
+  }, [dispatch]);
+
+  const handleScroll = ({ scrollOffset }) => {
+    // Only hide/show if scrolled more than 250px
+    if (scrollOffset > 250) {
+      // Scrolling down
+      if (scrollOffset > lastScrollTop.current) {
+        dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: false });
+      }
+      // Scrolling up
+      else if (scrollOffset < lastScrollTop.current) {
+        dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
+      }
+    } else {
+      // Near top, always show
+      dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
+    }
+
+    lastScrollTop.current = scrollOffset;
+  };
 
   const handleSongClick = React.useCallback(
     clickedIndex => {
@@ -168,7 +186,14 @@ const AllSongs = () => {
         <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           <AutoSizer>
             {({ height, width }) => (
-              <FixedSizeList height={height} itemCount={songs.length} itemSize={43} width={width}>
+              <FixedSizeList
+                height={height}
+                overscanCount={100}
+                itemCount={songs.length}
+                itemSize={43}
+                width={width}
+                onScroll={handleScroll}
+              >
                 {Row}
               </FixedSizeList>
             )}

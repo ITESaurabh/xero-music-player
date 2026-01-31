@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import { Paper, Stack, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import { Outlet } from 'react-router-dom';
+import { motion } from 'motion/react';
 
 import PlayBar from './PlayBar';
 import MainDrawer from './MainDrawer';
@@ -71,12 +72,29 @@ function Layout() {
         >
           <MainDrawer />
         </Drawer>
-        <Stack sx={{ height: '100%', width: '100%', flex: 1, position: 'relative', minWidth: 0 }}>
+        <Stack
+          sx={{
+            height: '100%',
+            width: '100%',
+            flex: 1,
+            position: 'relative',
+            minWidth: 0,
+            overflow: 'hidden',
+          }}
+        >
           <Box height="32px">&nbsp;</Box>
           <Grid
             component={Paper}
             borderRadius={'0.5rem 0rem 0rem 0.5rem'}
-            sx={{ height: '100%', flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, p: 0, m: 0 }}
+            sx={{
+              height: '100%',
+              flex: 1,
+              width: '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+              p: 0,
+              m: 0,
+            }}
             container
           >
             <Grid
@@ -96,12 +114,22 @@ function Layout() {
               <Outlet />
             </Grid>
           </Grid>
-          <Box
-            sx={{
+          <motion.div
+            animate={{
+              y: isPhone
+                ? state.isPlayerBarVisible
+                  ? -220
+                  : 200
+                : state.isPlayerBarVisible
+                  ? -220
+                  : 0,
+            }}
+            transition={{ type: isPhone ? 'tween' : 'spring' }}
+            style={{
               position: 'absolute',
               left: 0,
               right: 0,
-              bottom: 20,
+              bottom: isPhone ? -220 : -200,
               zIndex: 10,
               width: '100%',
               display: 'flex',
@@ -119,7 +147,7 @@ function Layout() {
             >
               <PlayBar />
             </Box>
-          </Box>
+          </motion.div>
         </Stack>
       </Box>
     </Box>

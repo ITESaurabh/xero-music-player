@@ -7,6 +7,7 @@ import {
   ListSubheader,
   Divider,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import SearchBar from './SearchBar';
 import { Link, useMatch, useResolvedPath } from 'react-router-dom';
@@ -157,6 +158,8 @@ function MainDrawer({ tempDrawer }) {
 
 function CustomLink({ item, ...props }) {
   let resolved = useResolvedPath(item.href);
+  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
+  const { dispatch } = useContext(store);
   let match = useMatch({ path: resolved.pathname, end: true });
   return (
     <>
@@ -164,6 +167,9 @@ function CustomLink({ item, ...props }) {
         component={Link}
         sx={{ borderRadius: 15, mb: 1 }}
         selected={!!match}
+        onClick={
+          isPhone ? () => dispatch({ type: 'SET_MENU_EXPANDED', payload: false }) : undefined
+        }
         to={item.href}
         // dense
         {...props}

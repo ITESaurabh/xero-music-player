@@ -14,7 +14,9 @@ import { Card, Hidden, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import DiscordIcon from 'svg-react-loader?name=DiscordIcon!../../img/discord-logo.svg';
 import { RepeatRounded, ShuffleRounded } from '@mui/icons-material';
-import { sendMessageToNode } from '../../main/utils/renProcess';
+import ShuffleOnRoundedIcon from '@mui/icons-material/ShuffleOnRounded';
+import RepeatOneOnRoundedIcon from '@mui/icons-material/RepeatOneOnRounded';
+import RepeatOnRoundedIcon from '@mui/icons-material/RepeatOnRounded';
 import { store } from '../utils/store';
 import { getVolumeLevel, setVolumeLevel } from '../utils/LocStoreUtil';
 var jsmediatags = require('jsmediatags');
@@ -24,7 +26,7 @@ import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
 import Image from 'mui-image';
 import { DEFAULT_AA } from '../../config/constants';
 
-const CoverImage = styled('div')({
+const CoverImage = styled(Box)(({ theme }) => ({
   width: 140,
   height: 140,
   margin: 10,
@@ -36,7 +38,11 @@ const CoverImage = styled('div')({
   '& > img': {
     width: '100%',
   },
-});
+  [theme.breakpoints.down('md')]: {
+    width: 90,
+    height: 90,
+  },
+}));
 
 const TinyText = styled(Typography)({
   fontSize: '0.75rem',
@@ -59,7 +65,7 @@ export default function PlayBar() {
   const audioRef = useRef();
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(true);
   const [muteVolume, setMuteVolume] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [songMeta, setSongMeta] = useState(initialMeta);
@@ -68,24 +74,25 @@ export default function PlayBar() {
   let defaultVol = getVolumeLevel();
   const [volume, setVolume] = useState(defaultVol);
   const [lastVolume, setLastVolume] = useState(defaultVol > 0 ? defaultVol : 30);
-  const [isLoop, setIsLoop] = useState(state.isLoop);
-  const [isShuffle, setIsShuffle] = useState(state.isShuffle);
 
   useEffect(() => {
-    if (state?.track) {
-      setSongPath(state?.track.Uri);
+    // Only set songPath and paused if queue is ready and track is valid
+    if (Array.isArray(state?.queue) && state.queue.length > 0 && state?.track && state?.track.Uri) {
+      setSongPath(state.track.Uri);
       setPaused(false);
+    } else {
+      setSongPath(null);
+      setPaused(true);
     }
-  }, [state?.track]);
+  }, [state?.track, state?.queue]);
 
   useEffect(() => {
-    if (audioRef.current && songPath) {
+    // Only interact with audio if queue is ready and track is valid
+    if (audioRef.current && songPath && Array.isArray(state?.queue) && state.queue.length > 0) {
       // Convert file path to file:// URL for proper audio loading
       const fileUrl = `file://${songPath.replace(/\\/g, '/')}`;
       audioRef.current.src = fileUrl;
       audioRef.current.volume = defaultVol / 100;
-      audioRef.current.play();
-      setPaused(false);
       // Fetch metadata
       jsmediatags.read(songPath, {
         onSuccess: function (tag) {
@@ -107,8 +114,18 @@ export default function PlayBar() {
           setSongMeta(initialMeta);
         },
       });
+      // Play only after loadedmetadata
+      const handleLoadedMetadata = () => {
+        if (!paused) {
+          audioRef.current.play().catch(() => {});
+        }
+      };
+      audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+      return () => {
+        audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
     }
-  }, [songPath]);
+  }, [songPath, state?.queue, paused]);
 
   useEffect(() => {
     if (!songPath) {
@@ -151,48 +168,32 @@ export default function PlayBar() {
   };
 
   useEffect(() => {
-    if (audioRef.current) {
-      if (!paused) {
-        audioRef.current.play();
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [paused]);
-
-  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const handleTimeUpdate = () => {
       if (!isSeeking) setPosition(audio.currentTime);
     };
     const handleLoadedMetadata = () => setDuration(audio.duration);
-    const handleEnded = () => {
-      setPosition(0);
-      setPaused(true);
-    };
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
     };
   }, [audioRef, isSeeking, state?.track]);
 
   useEffect(() => {
-    setIsLoop(state.isLoop);
-    setIsShuffle(state.isShuffle);
-  }, [state.isLoop, state.isShuffle]);
-
-  useEffect(() => {
     if (audioRef.current) {
       audioRef.current.onended = () => {
+        setPosition(0);
         if (state.queue && state.queue.length > 0) {
-          if (state.queueIndex < state.queue.length - 1) {
+          if (state.repeatMode === 'one') {
+            // Repeat the current track
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(() => {});
+          } else if (state.queueIndex < state.queue.length - 1) {
             dispatch({ type: 'NEXT_TRACK' });
-          } else if (isLoop) {
+          } else if (state.repeatMode === 'all') {
             dispatch({ type: 'NEXT_TRACK' });
           } else {
             setPaused(true);
@@ -200,13 +201,16 @@ export default function PlayBar() {
         }
       };
     }
-  }, [state.queue, state.queueIndex, isLoop, dispatch]);
+  }, [state.queue, state.queueIndex, state.repeatMode, dispatch]);
 
   const handleShuffle = () => {
-    dispatch({ type: 'SET_SHUFFLE', payload: !isShuffle });
+    dispatch({ type: 'SET_SHUFFLE', payload: !state.isShuffle });
   };
-  const handleLoop = () => {
-    dispatch({ type: 'SET_LOOP', payload: !isLoop });
+  const handleRepeat = () => {
+    const modes = ['off', 'all', 'one'];
+    const currentIndex = modes.indexOf(state.repeatMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    dispatch({ type: 'SET_REPEAT_MODE', payload: nextMode });
   };
 
   function formatDuration(value) {
@@ -248,7 +252,7 @@ export default function PlayBar() {
     }
   };
 
-  const clearLongPress = (callback) => {
+  const clearLongPress = callback => {
     if (longPressTimeout.current) {
       clearTimeout(longPressTimeout.current);
       longPressTimeout.current = null;
@@ -311,42 +315,46 @@ export default function PlayBar() {
         elevation={3}
         component={Card}
       >
-        <Grid xs={6}>
+        <Grid xs={12} md={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-            <Hidden mdDown>
-              <CoverImage>
-                <Image
-                  id={songMeta.title}
-                  src={songMeta.albumArt}
-                  className="no-select no-drag"
-                  showLoading
-                  sx={{
-                    borderRadius: '0.4375rem',
-                  }}
-                  fit="contain"
-                />
-              </CoverImage>
-            </Hidden>
-            <Box sx={{ ml: 0.5, minWidth: 0 }}>
-              <Typography variant="h6" component="h6" noWrap className="no-select no-drag">
+            <CoverImage>
+              <Image
+                id={songMeta.title}
+                src={songMeta.albumArt}
+                className="no-select no-drag"
+                showLoading
+                sx={{
+                  borderRadius: '0.4375rem',
+                }}
+                fit="contain"
+              />
+            </CoverImage>
+            <Box sx={{ ml: 0.5, minWidth: 0, overflow: 'auto' }}>
+              <Typography
+                variant="h6"
+                component="h6"
+                noWrap={!isPhone}
+                className="no-select no-drag"
+              >
                 <b>{state?.track?.Title}</b>
               </Typography>
               <Typography
                 variant="body1"
                 color="text.secondary"
                 fontWeight={500}
+                noWrap={!isPhone}
                 className="no-select no-drag"
               >
                 {songMeta.artist}
               </Typography>
-              <Typography noWrap className="no-select no-drag">
+              <Typography noWrap={!isPhone} className="no-select no-drag">
                 {songMeta.album}
               </Typography>
             </Box>
           </Box>
         </Grid>
-        <Grid justifyContent="center" alignContent="center" xs={5}>
-          <Box marginInline={3} mt={2}>
+        <Grid justifyContent="center" alignContent="center" xs={12} md={5}>
+          <Box marginInline={3} mt={isPhone ? 0 : 2}>
             <Slider
               aria-label="time-indicator"
               size="small"
@@ -364,7 +372,7 @@ export default function PlayBar() {
               onTouchStart={() => setIsSeeking(true)}
               onTouchEnd={() => setIsSeeking(false)}
               sx={{
-                color: theme.palette.mode === 'dark' ? '#fff' : 'rgba(0,0,0,0.87)',
+                color: theme.palette.primary.main,
                 '& .MuiSlider-track': {
                   border: 'none',
                 },
@@ -372,6 +380,7 @@ export default function PlayBar() {
                 '& .MuiSlider-thumb': {
                   width: 20,
                   height: 20,
+                  backgroundColor: theme.palette.text.primary,
                   transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
                   '&:before': {
                     boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)',
@@ -439,7 +448,7 @@ export default function PlayBar() {
             <Stack
               spacing={2}
               direction="row"
-              sx={{ my: 1, px: 1, width: '60%', marginInline: 'auto' }}
+              sx={{ mt: 1, mb: isPhone ? 0 : 1, px: 1, width: '60%', marginInline: 'auto' }}
               alignItems="center"
             >
               <IconButton size="small" onClick={handleMuteClick}>
@@ -458,16 +467,7 @@ export default function PlayBar() {
                 max={100}
                 onChange={handleVolumeChange}
                 sx={{
-                  color:
-                    theme.palette.mode === 'dark'
-                      ? volume >= 60
-                        ? theme.palette.error.main
-                        : '#fff'
-                      : volume >= 60
-                      ? theme.palette.error.main
-                      : '#6b6b6b',
-
-                  // '#6b6b6b',
+                  color: theme.palette.primary.main,
                   '& .MuiSlider-track': {
                     border: 'none',
                   },
@@ -476,6 +476,7 @@ export default function PlayBar() {
                   '& .MuiSlider-thumb': {
                     width: 14,
                     height: 14,
+                    backgroundColor: theme.palette.text.primary,
                     transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
                     '&:before': {
                       boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)',
@@ -505,13 +506,19 @@ export default function PlayBar() {
             </Stack>
           </Box>
         </Grid>
-        <Grid xs={1} direction="row">
-          <Box m={2}>
+        <Grid xs={12} md={1} direction="row">
+          <Box m={1}>
             <IconButton onClick={handleShuffle} aria-label="shuffle">
-              <ShuffleRounded />
+              {state.isShuffle ? <ShuffleOnRoundedIcon /> : <ShuffleRounded />}
             </IconButton>
-            <IconButton onClick={handleLoop} aria-label="repeat">
-              <RepeatRounded />
+            <IconButton onClick={handleRepeat} aria-label="repeat">
+              {state.repeatMode === 'off' ? (
+                <RepeatRounded />
+              ) : state.repeatMode === 'all' ? (
+                <RepeatOnRoundedIcon />
+              ) : (
+                <RepeatOneOnRoundedIcon />
+              )}
             </IconButton>
             <IconButton onClick={() => null} aria-label="discord visibility">
               <DiscordIcon style={{ width: 25, height: 25 }} />

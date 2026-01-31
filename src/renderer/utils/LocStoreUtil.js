@@ -30,3 +30,12 @@ export function getVolumeLevel() {
     return 30;
   }
 }
+
+export function setQueueState(queue, queueIndex, track) {
+  localStorage.setItem('queue_state', JSON.stringify({ queue, queueIndex, track }));
+}
+
+export function getQueueState() {
+  const state = localStorage.getItem('queue_state');
+  return state ? JSON.parse(state) : null;
+}

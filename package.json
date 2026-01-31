@@ -59,6 +59,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "jsmediatags": "^3.9.7",
     "minimist": "^1.2.8",
+    "motion": "^12.29.2",
     "mui-image": "^1.0.7",
     "music-metadata": "^11.7.3",
     "prop-types": "^15.8.1",
@@ -68,5 +69,6 @@
     "react-router-dom": "^7.1.1",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^1.8.11"
-  }
+  },
+  "packageManager": "yarn@4.12.0"
 }

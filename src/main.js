@@ -60,7 +60,7 @@ const createWindow = () => {
     resizable: false,
     icon: './assets/logo/XeroTunesLogo.png',
   });
-  
+
   loadingWin.loadFile(path.join(__dirname, 'loader.html'));
 
   loadingWin.once('ready-to-show', () => {
