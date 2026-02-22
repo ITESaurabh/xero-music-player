@@ -1,9 +1,82 @@
 const { app, BrowserWindow, ipcMain, screen, nativeTheme, Menu } = require('electron');
+const { execSync } = require('child_process');
+const path = require('path');
+
+// Handle Squirrel.Windows install/uninstall events, write registry entries,
+// and manage Desktop + Start Menu shortcuts.
+// Must run before anything else so the app can quit cleanly during installer phases.
+function handleSquirrelEvent() {
+  if (process.platform !== 'win32') return false;
+
+  const squirrelEvent = process.argv[1];
+  if (!squirrelEvent || !squirrelEvent.startsWith('--squirrel-')) return false;
+
+  const exePath = process.execPath;
+  const exeName = path.basename(exePath);
+  // Update.exe lives two levels up from the versioned app folder:
+  // %LocalAppData%\xero-music-player\Update.exe
+  const updateExe = path.resolve(exePath, '..', '..', 'Update.exe');
+
+  const run = (cmd) => {
+    try { execSync(cmd, { windowsHide: true }); } catch (_) { /* ignore */ }
+  };
+
+  const regWrite = (key, name, value, type = 'REG_SZ') => {
+    const nameFlag = name ? `/v "${name}"` : '/ve';
+    run(`reg add "${key}" ${nameFlag} /t ${type} /d "${value}" /f`);
+  };
+
+  const regDelete = (key) => run(`reg delete "${key}" /f`);
+
+  switch (squirrelEvent) {
+    case '--squirrel-install':
+    case '--squirrel-updated': {
+      // Desktop + Start Menu shortcuts via Squirrel's own Update.exe
+      run(`"${updateExe}" --createShortcut="${exeName}" --shortcut-locations=Desktop,StartMenu`);
+
+      // Context menu — HKCU\Software\Classes acts as a per-user override of HKCR,
+      // no admin elevation required for Squirrel's per-user install model.
+      const ctxRoot = 'HKCU\\Software\\Classes\\*\\shell\\XeroMusicPlayer';
+      regWrite(ctxRoot, null, 'Open with Xero Music Player');
+      regWrite(ctxRoot, 'Icon', exePath);
+      regWrite(`${ctxRoot}\\command`, null, `"${exePath}" "%1"`);
+
+      // AppUserModelId for taskbar pinning / jump lists
+      const aumidRoot = 'HKCU\\Software\\Classes\\AppUserModelId\\com.itesaurabh.xmp';
+      regWrite(aumidRoot, 'DisplayName', 'Xero Music Player');
+      regWrite(aumidRoot, 'IconUri', exePath);
+
+      app.quit();
+      return true;
+    }
+
+    case '--squirrel-uninstall': {
+      // Remove Desktop + Start Menu shortcuts
+      run(`"${updateExe}" --removeShortcut="${exeName}" --shortcut-locations=Desktop,StartMenu`);
+
+      regDelete('HKCU\\Software\\Classes\\*\\shell\\XeroMusicPlayer');
+      regDelete('HKCU\\Software\\Classes\\AppUserModelId\\com.itesaurabh.xmp');
+      app.quit();
+      return true;
+    }
+
+    case '--squirrel-obsolete':
+      app.quit();
+      return true;
+  }
+
+  return false;
+}
+
+if (handleSquirrelEvent()) {
+  // Squirrel lifecycle event handled — app will quit, nothing more to do.
+}
+
+app.setAppUserModelId('com.itesaurabh.xmp');
 
 let isDarkMode = nativeTheme.shouldUseDarkColors;
 
 const fs = require('fs');
-const path = require('path');
 const { default: mainIpcs } = require('./main/utils/mainProcess');
 let mainWin = null;
 let miniWin = null;
@@ -16,9 +89,6 @@ const parsedArgs = require('minimist')(process.argv.slice(1), {
   alias: { help: 'h', version: 'v', file: 'f' },
 });
 
-if (require('electron-squirrel-startup')) {
-  app.quit();
-}
 let isSingleInstance = app.requestSingleInstanceLock();
 // app.commandLine.appendSwitch('high-dpi-support', 1);
 // app.commandLine.appendSwitch('force-device-scale-factor', 1);
@@ -97,6 +167,10 @@ const createWindow = () => {
             webSecurity: process.env.NODE_ENV !== 'development',
           },
         });
+        miniWin.setAppDetails({
+          appId: 'com.itesaurabh.xmp',
+          appName: 'Xero Mini Player',
+        });
         miniWin.webContents.once('dom-ready', () => {
           miniWin.show();
           // miniWin.webContents.openDevTools();
@@ -167,6 +241,10 @@ const createWindow = () => {
       },
     });
     mainWin.setMenu(null);
+    mainWin.setAppDetails({
+      appId: 'com.itesaurabh.xmp',
+      appName: 'Xero Music Player',
+    });
     mainWin.once('ready-to-show', () => {
       mainWin.show();
       loadingWin.hide();

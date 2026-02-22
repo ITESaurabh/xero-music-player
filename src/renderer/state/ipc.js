@@ -12,8 +12,8 @@ export const IpcProvider = ({ children }) => {
   const { _state, dispatch } = useContext(store);
   useEffect(() => {
     const handleIpcMessage = (event, arg) => {
-      // Handle the IPC message
-      dispatch({ type: 'SET_CURR_TRACK', payload: { path: arg } });
+      // Handle the IPC message — set path so MiniPlayerView can load and play the file
+      dispatch({ type: 'SET_PATH', payload: arg });
       // console.log('arg', arg, event);
     };
 

@@ -6,11 +6,12 @@ const initialState = (() => {
   return {
     isLightTheme: true,
     isMaximized: false,
-    isMenuExpanded: false,
+    isMenuExpanded: true,
     path: null,
     track: saved?.track || null,
     isPlaying: false,
     position: 0,
+    searchEnabled: false,
     queue: saved?.queue || [],
     queueIndex: saved?.queueIndex || 0,
     originalQueue: saved?.queue || [], // Store original queue order
@@ -38,6 +39,12 @@ const StateProvider = ({ children }) => {
           isMaximized: action.payload,
         };
       }
+      case 'SET_SEARCH_ENABLED': {
+        return {
+          ...state,
+          searchEnabled: action.payload,
+        };
+      }
       case 'SET_MENU_EXPANDED': {
         return {
           ...state,
@@ -51,6 +58,12 @@ const StateProvider = ({ children }) => {
           queue: action.payload.queue,
           queueIndex: action.payload.index || 0,
           originalQueue: action.payload.queue, // Store original queue
+        };
+      }
+      case 'SET_PATH': {
+        return {
+          ...state,
+          path: action.payload,
         };
       }
       case 'SET_CURR_TRACK': {

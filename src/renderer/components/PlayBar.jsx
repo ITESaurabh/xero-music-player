@@ -25,6 +25,7 @@ import speaker232Regular from '@iconify/icons-fluent/speaker-2-32-regular';
 import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
 import Image from 'mui-image';
 import { DEFAULT_AA } from '../../config/constants';
+const { ipcRenderer } = window.require('electron');
 
 const CoverImage = styled(Box)(({ theme }) => ({
   width: 140,
@@ -61,8 +62,13 @@ const initialMeta = {
 export default function PlayBar() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const { state, dispatch } = useContext(store);
+  let defaultVol = getVolumeLevel();
   const [songPath, setSongPath] = useState(null);
   const audioRef = useRef();
+  const fadeIntervalRef = useRef(null);
+  const volumeRef = useRef(defaultVol / 100);
+  const muteVolumeRef = useRef(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [paused, setPaused] = useState(true);
@@ -70,8 +76,6 @@ export default function PlayBar() {
   const [isSeeking, setIsSeeking] = useState(false);
   const [songMeta, setSongMeta] = useState(initialMeta);
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
-  const { state, dispatch } = useContext(store);
-  let defaultVol = getVolumeLevel();
   const [volume, setVolume] = useState(defaultVol);
   const [lastVolume, setLastVolume] = useState(defaultVol > 0 ? defaultVol : 30);
 
@@ -116,16 +120,14 @@ export default function PlayBar() {
       });
       // Play only after loadedmetadata
       const handleLoadedMetadata = () => {
-        if (!paused) {
-          audioRef.current.play().catch(() => {});
-        }
+        audioRef.current.play().catch(() => {});
       };
       audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
       return () => {
         audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
       };
     }
-  }, [songPath, state?.queue, paused]);
+  }, [songPath, state?.queue]);
 
   useEffect(() => {
     if (!songPath) {
@@ -140,7 +142,10 @@ export default function PlayBar() {
   }, [songPath]);
 
   useEffect(() => {
-    if (audioRef.current) {
+    volumeRef.current = volume / 100;
+    muteVolumeRef.current = muteVolume;
+    // Only apply volume directly when not in a fade transition
+    if (audioRef.current && !fadeIntervalRef.current) {
       audioRef.current.volume = muteVolume ? 0 : volume / 100;
       audioRef.current.muted = muteVolume;
     }
@@ -202,6 +207,157 @@ export default function PlayBar() {
       };
     }
   }, [state.queue, state.queueIndex, state.repeatMode, dispatch]);
+
+  // Sync audio element play/pause with smooth fade in/out
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !songPath) return;
+
+    // Cancel any running fade first
+    if (fadeIntervalRef.current) {
+      clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
+    }
+
+    const FADE_STEPS = 25;
+    const FADE_INTERVAL_MS = 20; // 25 steps × 20ms = 500ms total
+
+    if (paused) {
+      const startVol = audio.volume;
+      let step = 0;
+      fadeIntervalRef.current = setInterval(() => {
+        step++;
+        audio.volume = Math.max(0, startVol * (1 - step / FADE_STEPS));
+        if (step >= FADE_STEPS) {
+          clearInterval(fadeIntervalRef.current);
+          fadeIntervalRef.current = null;
+          audio.pause();
+          // Restore to user volume so next play fades from correct target
+          audio.volume = muteVolumeRef.current ? 0 : volumeRef.current;
+        }
+      }, FADE_INTERVAL_MS);
+    } else {
+      const targetVol = muteVolumeRef.current ? 0 : volumeRef.current;
+      audio.volume = 0;
+      audio.play().catch(() => {});
+      let step = 0;
+      fadeIntervalRef.current = setInterval(() => {
+        step++;
+        audio.volume = Math.min(targetVol, targetVol * (step / FADE_STEPS));
+        if (step >= FADE_STEPS) {
+          audio.volume = targetVol;
+          clearInterval(fadeIntervalRef.current);
+          fadeIntervalRef.current = null;
+        }
+      }, FADE_INTERVAL_MS);
+    }
+  }, [paused, songPath]);
+
+  // --- Media Session API ---
+  // Update OS metadata (Now Playing, lock screen, taskbar) when track changes
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: songMeta.title,
+      artist: songMeta.artist,
+      album: songMeta.album,
+      artwork: songMeta.albumArt ? [{ src: songMeta.albumArt }] : [],
+    });
+  }, [songMeta]);
+
+  // Sync OS playback state with local paused state
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = paused ? 'paused' : 'playing';
+  }, [paused]);
+
+  // Keep OS seek bar in sync with audio position
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !duration) return;
+    try {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: audioRef.current?.playbackRate || 1,
+        position: position,
+      });
+    } catch {}
+  }, [position, duration]);
+
+  // Register OS media key / hardware button action handlers
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      setPaused(false);
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      setPaused(true);
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      setPaused(true);
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      dispatch({ type: 'NEXT_TRACK' });
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      dispatch({ type: 'PREV_TRACK' });
+    });
+    navigator.mediaSession.setActionHandler('seekto', details => {
+      if (audioRef.current && details.seekTime !== undefined) {
+        audioRef.current.currentTime = details.seekTime;
+        setPosition(details.seekTime);
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekforward', details => {
+      const skipTime = details.seekOffset || 10;
+      if (audioRef.current) {
+        audioRef.current.currentTime = Math.min(
+          duration,
+          audioRef.current.currentTime + skipTime
+        );
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', details => {
+      const skipTime = details.seekOffset || 10;
+      if (audioRef.current) {
+        audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - skipTime);
+      }
+    });
+
+    return () => {
+      [
+        'play', 'pause', 'stop',
+        'nexttrack', 'previoustrack',
+        'seekto', 'seekforward', 'seekbackward',
+      ].forEach(action => {
+        try { navigator.mediaSession.setActionHandler(action, null); } catch {}
+      });
+    };
+  }, [dispatch, duration]);
+  // --- End Media Session API ---
+
+  // ── Thumbnail toolbar sync ──────────────────────────────────────────
+  // Notify main process whenever play/pause changes so it can flip the icon
+  useEffect(() => {
+    ipcRenderer.send('thumbar-update', { isPlaying: !paused });
+  }, [paused]);
+
+  // Listen for button clicks from the Windows thumbnail toolbar
+  useEffect(() => {
+    const onToggle = () => setPaused(prev => !prev);
+    const onNext   = () => dispatch({ type: 'NEXT_TRACK' });
+    const onPrev   = () => dispatch({ type: 'PREV_TRACK' });
+
+    ipcRenderer.on('thumbar-toggle', onToggle);
+    ipcRenderer.on('thumbar-next',   onNext);
+    ipcRenderer.on('thumbar-prev',   onPrev);
+    return () => {
+      ipcRenderer.removeListener('thumbar-toggle', onToggle);
+      ipcRenderer.removeListener('thumbar-next',   onNext);
+      ipcRenderer.removeListener('thumbar-prev',   onPrev);
+    };
+  }, [dispatch]);
+  // ── End Thumbnail toolbar sync ───────────────────────────────────────
 
   const handleShuffle = () => {
     dispatch({ type: 'SET_SHUFFLE', payload: !state.isShuffle });

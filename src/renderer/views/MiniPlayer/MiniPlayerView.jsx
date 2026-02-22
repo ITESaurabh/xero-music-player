@@ -78,7 +78,7 @@ export default function MiniPlayerView() {
   const [volume, setVolume] = useState(defaultVol);
   const { state, dispatch } = useContext(store);
   const { path, isPlaying } = state;
-  const { sendMessageToMainProcess } = useIpc();
+  const { sendEventToMainProcess } = useIpc();
   const [songMeta, setSongMeta] = useState(initialMeta);
   const [position, setPosition] = useState(0);
   const [muteVolume, setMuteVolume] = useState(false);
@@ -86,19 +86,59 @@ export default function MiniPlayerView() {
 
   const audioRef = useRef();
   const progressBarRef = useRef();
+  const fadeIntervalRef = useRef(null);
+  const volumeRef = useRef(defaultVol / 100);
+  const muteVolumeRef = useRef(false);
 
   useEffect(() => {
-    if (audioRef) {
-      audioRef.current.volume = volume / 100;
+    volumeRef.current = volume / 100;
+    muteVolumeRef.current = muteVolume;
+    if (audioRef.current && !fadeIntervalRef.current) {
+      audioRef.current.volume = muteVolume ? 0 : volume / 100;
       audioRef.current.muted = muteVolume;
     }
   }, [volume, audioRef, muteVolume]);
 
   useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Cancel any running fade first
+    if (fadeIntervalRef.current) {
+      clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
+    }
+
+    const FADE_STEPS = 20;
+    const FADE_INTERVAL_MS = 10;
+
     if (isPlaying) {
-      audioRef.current.play();
+      const targetVol = muteVolumeRef.current ? 0 : volumeRef.current;
+      audio.volume = 0;
+      audio.play().catch(() => {});
+      let step = 0;
+      fadeIntervalRef.current = setInterval(() => {
+        step++;
+        audio.volume = Math.min(targetVol, targetVol * (step / FADE_STEPS));
+        if (step >= FADE_STEPS) {
+          audio.volume = targetVol;
+          clearInterval(fadeIntervalRef.current);
+          fadeIntervalRef.current = null;
+        }
+      }, FADE_INTERVAL_MS);
     } else {
-      audioRef.current.pause();
+      const startVol = audio.volume;
+      let step = 0;
+      fadeIntervalRef.current = setInterval(() => {
+        step++;
+        audio.volume = Math.max(0, startVol * (1 - step / FADE_STEPS));
+        if (step >= FADE_STEPS) {
+          clearInterval(fadeIntervalRef.current);
+          fadeIntervalRef.current = null;
+          audio.pause();
+          audio.volume = muteVolumeRef.current ? 0 : volumeRef.current;
+        }
+      }, FADE_INTERVAL_MS);
     }
   }, [isPlaying, audioRef]);
 
@@ -204,7 +244,7 @@ export default function MiniPlayerView() {
           >
             <IconButton
               aria-label="minimize"
-              onClick={() => sendMessageToMainProcess('minimize')}
+              onClick={() => sendEventToMainProcess('minimize')}
               sx={{
                 backgroundColor: isDark ? 'black' : '#d9d9d9',
               }}
@@ -212,7 +252,7 @@ export default function MiniPlayerView() {
               <Icon icon={subtract12Filled} fontSize={12} />
             </IconButton>
             <IconButton
-              onClick={() => sendMessageToMainProcess('closeWindow')}
+              onClick={() => sendEventToMainProcess('closeWindow')}
               sx={{
                 transition: 'background-color 0.2s ease-in-out',
                 ':hover': {

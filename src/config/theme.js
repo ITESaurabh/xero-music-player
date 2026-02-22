@@ -66,7 +66,7 @@ export const getBaseTheme = mode => ({
     },
   },
   shape: {
-    borderRadius: 10,
+    borderRadius: 18,
   },
   //
   // Overrides

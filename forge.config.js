@@ -12,7 +12,7 @@ module.exports = {
     {
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: "xero-music-player",
+        name: 'xero-music-player',
         icon: './src/assets/logo/XeroTunesLogo.ico',
       },
     },
@@ -23,13 +23,13 @@ module.exports = {
     {
       name: '@electron-forge/maker-deb',
       config: {
-        name: "xero-music-player",
+        name: 'xero-music-player',
       },
     },
     {
       name: '@electron-forge/maker-rpm',
       config: {
-        name: "xero-music-player",
+        name: 'xero-music-player',
       },
     },
   ],

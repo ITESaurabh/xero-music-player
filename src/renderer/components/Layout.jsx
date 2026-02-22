@@ -11,6 +11,7 @@ import { motion } from 'motion/react';
 import PlayBar from './PlayBar';
 import MainDrawer from './MainDrawer';
 import { store } from '../utils/store';
+import SearchDialog from './SearchDialog';
 const drawerWidth = 320;
 const Drawer = styled(MuiDrawer, { shouldForwardProp: prop => prop !== 'open' })(
   ({ theme, open }) => ({
@@ -150,6 +151,7 @@ function Layout() {
           </motion.div>
         </Stack>
       </Box>
+      <SearchDialog />
     </Box>
   );
 }

@@ -5,8 +5,12 @@ import InputBase from '@mui/material/InputBase';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
+import { store } from '../utils/store';
+import { useTheme } from '@mui/material';
 
 export default function SearchBar({ open, tempDrawer, toggleDrawer }) {
+  const { state, dispatch } = React.useContext(store);
+  const theme = useTheme();
   return (
     <Box
       component={open ? Paper : 'div'}
@@ -19,10 +23,19 @@ export default function SearchBar({ open, tempDrawer, toggleDrawer }) {
       )}
       <InputBase
         sx={{ ml: 1, flex: 1 }}
+        onClick={e => {
+          e.preventDefault();
+          dispatch({ type: 'SET_SEARCH_ENABLED', payload: true });
+        }}
         placeholder="Search"
         inputProps={{ 'aria-label': 'search' }}
       />
-      <IconButton type="button" sx={{ p: '10px' }} aria-label="search">
+      <IconButton
+        type="button"
+        sx={{ p: '10px' }}
+        aria-label="search"
+        onClick={() => dispatch({ type: 'SET_SEARCH_ENABLED', payload: true })}
+      >
         <SearchIcon />
       </IconButton>
     </Box>

@@ -12,11 +12,12 @@ import { getBaseTheme } from './config/theme';
 import { ipcRenderer } from 'electron';
 import Titlebar from './renderer/components/Titlebar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useKeyboardShortcuts, SHORTCUTS } from './renderer/utils/useKeyboardShortcuts';
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { _state, dispatch } = useContext(store);
+  const { state, dispatch } = useContext(store);
   const [systemIsDark, setSystemIsDark] = useState(true);
   const currTheme = getTheme();
 
@@ -44,6 +45,17 @@ const App = () => {
       dispatch({ type: 'SET_THEME', payload: currTheme });
     }
   }, [currTheme, dispatch]);
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts(
+    [
+      {
+        ...SHORTCUTS.SEARCH,
+        action: () => dispatch({ type: 'SET_SEARCH_ENABLED', payload: !state.searchEnabled }),
+      },
+    ],
+    { dispatch }
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
