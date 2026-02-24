@@ -1,15 +1,8 @@
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  screen,
-  nativeTheme,
-  Menu,
-} from "electron";
-import { execSync } from "child_process";
-import path from "path";
-import fs from "fs";
-import mainIpcs from "./main/utils/mainProcess";
+import { app, BrowserWindow, ipcMain, screen, nativeTheme, Menu } from 'electron';
+import { execSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import mainIpcs from './main/utils/mainProcess';
 
 // Webpack-injected entry point URLs
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -19,14 +12,14 @@ declare const MINI_PLAYER_WEBPACK_ENTRY: string;
 // and manage Desktop + Start Menu shortcuts.
 // Must run before anything else so the app can quit cleanly during installer phases.
 function handleSquirrelEvent(): boolean {
-  if (process.platform !== "win32") return false;
+  if (process.platform !== 'win32') return false;
 
   const squirrelEvent = process.argv[1];
-  if (!squirrelEvent || !squirrelEvent.startsWith("--squirrel-")) return false;
+  if (!squirrelEvent || !squirrelEvent.startsWith('--squirrel-')) return false;
 
   const exePath = process.execPath;
   const exeName = path.basename(exePath);
-  const updateExe = path.resolve(exePath, "..", "..", "Update.exe");
+  const updateExe = path.resolve(exePath, '..', '..', 'Update.exe');
 
   const run = (cmd: string) => {
     try {
@@ -36,50 +29,40 @@ function handleSquirrelEvent(): boolean {
     }
   };
 
-  const regWrite = (
-    key: string,
-    name: string | null,
-    value: string,
-    type = "REG_SZ",
-  ) => {
-    const nameFlag = name ? `/v "${name}"` : "/ve";
+  const regWrite = (key: string, name: string | null, value: string, type = 'REG_SZ') => {
+    const nameFlag = name ? `/v "${name}"` : '/ve';
     run(`reg add "${key}" ${nameFlag} /t ${type} /d "${value}" /f`);
   };
 
   const regDelete = (key: string) => run(`reg delete "${key}" /f`);
 
   switch (squirrelEvent) {
-    case "--squirrel-install":
-    case "--squirrel-updated": {
-      run(
-        `"${updateExe}" --createShortcut="${exeName}" --shortcut-locations=Desktop,StartMenu`,
-      );
+    case '--squirrel-install':
+    case '--squirrel-updated': {
+      run(`"${updateExe}" --createShortcut="${exeName}" --shortcut-locations=Desktop,StartMenu`);
 
-      const ctxRoot = "HKCU\\Software\\Classes\\*\\shell\\XeroMusicPlayer";
-      regWrite(ctxRoot, null, "Open with Xero Music Player");
-      regWrite(ctxRoot, "Icon", exePath);
+      const ctxRoot = 'HKCU\\Software\\Classes\\*\\shell\\XeroMusicPlayer';
+      regWrite(ctxRoot, null, 'Open with Xero Music Player');
+      regWrite(ctxRoot, 'Icon', exePath);
       regWrite(`${ctxRoot}\\command`, null, `"${exePath}" "%1"`);
 
-      const aumidRoot =
-        "HKCU\\Software\\Classes\\AppUserModelId\\com.itesaurabh.xmp";
-      regWrite(aumidRoot, "DisplayName", "Xero Music Player");
-      regWrite(aumidRoot, "IconUri", exePath);
+      const aumidRoot = 'HKCU\\Software\\Classes\\AppUserModelId\\com.itesaurabh.xmp';
+      regWrite(aumidRoot, 'DisplayName', 'Xero Music Player');
+      regWrite(aumidRoot, 'IconUri', exePath);
 
       app.quit();
       return true;
     }
 
-    case "--squirrel-uninstall": {
-      run(
-        `"${updateExe}" --removeShortcut="${exeName}" --shortcut-locations=Desktop,StartMenu`,
-      );
-      regDelete("HKCU\\Software\\Classes\\*\\shell\\XeroMusicPlayer");
-      regDelete("HKCU\\Software\\Classes\\AppUserModelId\\com.itesaurabh.xmp");
+    case '--squirrel-uninstall': {
+      run(`"${updateExe}" --removeShortcut="${exeName}" --shortcut-locations=Desktop,StartMenu`);
+      regDelete('HKCU\\Software\\Classes\\*\\shell\\XeroMusicPlayer');
+      regDelete('HKCU\\Software\\Classes\\AppUserModelId\\com.itesaurabh.xmp');
       app.quit();
       return true;
     }
 
-    case "--squirrel-obsolete":
+    case '--squirrel-obsolete':
       app.quit();
       return true;
   }
@@ -91,20 +74,20 @@ if (handleSquirrelEvent()) {
   // Squirrel lifecycle event handled — app will quit, nothing more to do.
 }
 
-app.setAppUserModelId("com.itesaurabh.xmp");
+app.setAppUserModelId('com.itesaurabh.xmp');
 
-let isDarkMode = nativeTheme.shouldUseDarkColors;
+const isDarkMode = nativeTheme.shouldUseDarkColors;
 
 let mainWin: BrowserWindow | null = null;
 let miniWin: BrowserWindow | null = null;
 let loadingWin: BrowserWindow | null = null;
 Menu.setApplicationMenu(null);
 
-const minimist = require("minimist");
+const minimist = require('minimist');
 const parsedArgs = minimist(process.argv.slice(1), {
-  boolean: ["help", "version"],
-  string: ["file"],
-  alias: { help: "h", version: "v", file: "f" },
+  boolean: ['help', 'version'],
+  string: ['file'],
+  alias: { help: 'h', version: 'v', file: 'f' },
 });
 
 let isSingleInstance = app.requestSingleInstanceLock();
@@ -112,13 +95,13 @@ if (!isSingleInstance) {
   app.quit();
 }
 
-app.on("second-instance", (_event, commandLine) => {
-  if (process.platform !== "darwin") {
+app.on('second-instance', (_event, commandLine) => {
+  if (process.platform !== 'darwin') {
     const args = commandLine.slice(1);
     if (args.length > 1) {
       const params = args[1];
       if (miniWin) {
-        miniWin.webContents.send("play-mini", params);
+        miniWin.webContents.send('play-mini', params);
       }
     }
   }
@@ -128,66 +111,63 @@ const createWindow = () => {
   loadingWin = new BrowserWindow({
     show: false,
     frame: false,
-    titleBarStyle: "hidden",
+    titleBarStyle: 'hidden',
     width: 400,
     height: 250,
     trafficLightPosition: { x: -20, y: -20 },
-    backgroundColor: "#050407",
-    backgroundMaterial: "auto",
+    backgroundColor: '#050407',
+    backgroundMaterial: 'auto',
     darkTheme: true,
     maximizable: false,
     resizable: false,
-    icon: "./assets/logo/XeroTunesLogo.png",
+    icon: './assets/logo/XeroTunesLogo.png',
   });
 
-  loadingWin.loadFile(path.join(__dirname, "loader.html"));
+  loadingWin.loadFile(path.join(__dirname, 'loader.html'));
 
-  loadingWin.once("ready-to-show", () => {
+  loadingWin.once('ready-to-show', () => {
     loadingWin!.show();
   });
 
   const firstArg = parsedArgs._[0];
-  if (firstArg && firstArg !== "." && fs.existsSync(path.resolve(firstArg))) {
-    parsedArgs["file"] = firstArg;
+  if (firstArg && firstArg !== '.' && fs.existsSync(path.resolve(firstArg))) {
+    parsedArgs['file'] = firstArg;
   }
 
-  if (parsedArgs["file"]) {
+  if (parsedArgs['file']) {
     if (!miniWin || miniWin.isDestroyed()) {
-      loadingWin.once("show", () => {
+      loadingWin.once('show', () => {
         miniWin = new BrowserWindow({
           width: 400,
           height: 250,
           show: false,
           resizable: false,
-          backgroundColor: "#2e2c29",
+          backgroundColor: '#2e2c29',
           opacity: 0.98,
           darkTheme: true,
           maximizable: false,
           alwaysOnTop: false,
           frame: false,
-          titleBarStyle: "hidden",
+          titleBarStyle: 'hidden',
           trafficLightPosition: { x: -20, y: -20 },
           webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            webSecurity: process.env.NODE_ENV !== "development",
+            webSecurity: process.env.NODE_ENV !== 'development',
           },
         });
         miniWin!.setAppDetails({
-          appId: "com.itesaurabh.xmp",
-          relaunchDisplayName: "Xero Mini Player",
+          appId: 'com.itesaurabh.xmp',
+          relaunchDisplayName: 'Xero Mini Player',
         });
-        miniWin!.webContents.once("dom-ready", () => {
+        miniWin!.webContents.once('dom-ready', () => {
           miniWin!.show();
-          miniWin!.webContents.send(
-            "play-mini",
-            path.resolve(parsedArgs["file"]),
-          );
+          miniWin!.webContents.send('play-mini', path.resolve(parsedArgs['file']));
           loadingWin!.hide();
           loadingWin!.close();
         });
-        ipcMain.on("minimize", () => miniWin!.minimize());
-        ipcMain.on("maximize", () => {
+        ipcMain.on('minimize', () => miniWin!.minimize());
+        ipcMain.on('maximize', () => {
           if (miniWin!.isMaximized()) {
             miniWin!.unmaximize();
             miniWin!.center();
@@ -195,17 +175,17 @@ const createWindow = () => {
             miniWin!.maximize();
           }
         });
-        ipcMain.on("closeWindow", () => {
+        ipcMain.on('closeWindow', () => {
           miniWin!.close();
         });
-        ipcMain.on("add-track", (_e, message) => {
-          miniWin!.webContents.send("play-mini", message);
+        ipcMain.on('add-track', (_e, message) => {
+          miniWin!.webContents.send('play-mini', message);
         });
         miniWin!.loadURL(MINI_PLAYER_WEBPACK_ENTRY);
       });
     } else {
       miniWin.show();
-      miniWin.webContents.send("play-mini", path.resolve(parsedArgs["file"]));
+      miniWin.webContents.send('play-mini', path.resolve(parsedArgs['file']));
     }
     return;
   }
@@ -213,33 +193,33 @@ const createWindow = () => {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
 
-  loadingWin.once("show", () => {
+  loadingWin.once('show', () => {
     mainWin = new BrowserWindow({
       minWidth: 450,
       minHeight: 400,
       width: width - 200,
       height: height - 100,
       show: false,
-      backgroundColor: "#201e23",
+      backgroundColor: '#201e23',
       opacity: 1,
       darkTheme: isDarkMode ? true : false,
       trafficLightPosition: { x: 13, y: 8 },
       frame: false,
-      titleBarStyle: "hidden",
+      titleBarStyle: 'hidden',
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
         nodeIntegrationInWorker: true,
-        webSecurity: process.env.NODE_ENV !== "development",
+        webSecurity: process.env.NODE_ENV !== 'development',
         scrollBounce: true,
       },
     });
     mainWin!.setMenu(null);
     mainWin!.setAppDetails({
-      appId: "com.itesaurabh.xmp",
-      relaunchDisplayName: "Xero Music Player",
+      appId: 'com.itesaurabh.xmp',
+      relaunchDisplayName: 'Xero Music Player',
     });
-    mainWin!.once("ready-to-show", () => {
+    mainWin!.once('ready-to-show', () => {
       mainWin!.show();
       loadingWin!.hide();
       loadingWin!.close();
@@ -251,15 +231,15 @@ const createWindow = () => {
   });
 };
 
-app.on("ready", createWindow);
+app.on('ready', createWindow);
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-app.on("activate", () => {
+app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
