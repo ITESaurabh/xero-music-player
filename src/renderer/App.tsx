@@ -1,18 +1,18 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { store } from './renderer/utils/store';
-import { getTheme } from './renderer/utils/LocStoreUtil';
-import { useRoutes } from 'react-router-dom';
+import { store } from './utils/store';
+import { getTheme } from './utils/LocStoreUtil';
+import { useRoutes } from 'react-router';
 import { createTheme, CssBaseline, responsiveFontSizes, ThemeProvider } from '@mui/material';
-import routes from './renderer/utils/routes';
+import routes from './utils/routes';
 // import '@fontsource/open-sans/300.css';
 // import '@fontsource/open-sans/400.css';
 // import '@fontsource/open-sans/500.css';
 // import '@fontsource/open-sans/600.css';
-import { getBaseTheme } from './config/theme';
+import { getBaseTheme } from '../config/theme';
 import { ipcRenderer } from 'electron';
-import Titlebar from './renderer/components/Titlebar';
+import Titlebar from './components/Titlebar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useKeyboardShortcuts, SHORTCUTS } from './renderer/utils/useKeyboardShortcuts';
+import { useKeyboardShortcuts, SHORTCUTS } from './utils/useKeyboardShortcuts';
 
 const queryClient = new QueryClient();
 

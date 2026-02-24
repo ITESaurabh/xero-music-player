@@ -28,7 +28,7 @@ import foldersHierarchyIcon from '@iconify/icons-fluent/document-folder-24-regul
 import genresIcon from '@iconify/icons-fluent/guitar-24-regular';
 import yearsIcon from '@iconify/icons-fluent/timer-24-regular';
 import { store } from '../utils/store';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useIpc } from '../state/ipc';
 
 const searchCategories = [

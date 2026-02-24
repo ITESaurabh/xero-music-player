@@ -5,7 +5,7 @@ import MuiDrawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
 import { Paper, Stack, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router';
 import { motion } from 'motion/react';
 
 import PlayBar from './PlayBar';

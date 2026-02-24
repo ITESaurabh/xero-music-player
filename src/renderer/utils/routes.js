@@ -1,6 +1,6 @@
 import React, { lazy } from 'react';
 import Layout from '../components/Layout';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
 const AllSongs = lazy(() => import('../views/AllSongs'));
 const Albums = lazy(() => import('../views/Albums'));

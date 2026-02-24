@@ -1,8 +1,7 @@
 import React from 'react';
 import { Typography, AppBar, Toolbar, useTheme } from '@mui/material';
-import PropTypes from 'prop-types';
 
-function PageToolbar({ title, action }) {
+function PageToolbar({ title, action }: { title: string; action?: React.ReactNode }) {
   const theme = useTheme();
   return (
     <AppBar
@@ -31,10 +30,5 @@ function PageToolbar({ title, action }) {
     </AppBar>
   );
 }
-
-PageToolbar.propTypes = {
-  title: PropTypes.string.isRequired,
-  action: PropTypes.node,
-};
 
 export default PageToolbar;

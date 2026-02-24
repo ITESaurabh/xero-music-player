@@ -1,18 +1,18 @@
 import React, { useContext, useEffect } from 'react';
-import ReactDOM from 'react-dom/client';
-import { StateProvider, store } from './renderer/utils/store';
-import { getTheme } from './renderer/utils/LocStoreUtil';
+import { createRoot } from 'react-dom/client';
+import { StateProvider, store } from './utils/store';
+import { getTheme } from './utils/LocStoreUtil';
 import { createTheme, CssBaseline, responsiveFontSizes, ThemeProvider } from '@mui/material';
 // import '@fontsource/open-sans/300.css';
 // import '@fontsource/open-sans/400.css';
 // import '@fontsource/open-sans/500.css';
 // import '@fontsource/open-sans/600.css';
-import MiniPlayerView from './renderer/views/MiniPlayer/MiniPlayerView';
-import { getBaseTheme } from './config/theme';
-import { IpcProvider } from './renderer/state/ipc';
-import './renderer/styles/mini_player.scss';
+import MiniPlayerView from './views/MiniPlayer/MiniPlayerView';
+import { getBaseTheme } from '../config/theme';
+import { IpcProvider } from './state/ipc';
+import './styles/mini_player.scss';
 
-const root = ReactDOM.createRoot(document.getElementById('app'));
+const root = createRoot(document.getElementById('app')!);
 
 const App = () => {
   let isDarkThemePreferred = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -39,16 +39,12 @@ const App = () => {
   );
 };
 
-function render() {
-  root.render(
-    <React.StrictMode>
-      <StateProvider>
-        <IpcProvider>
-          <App />
-        </IpcProvider>
-      </StateProvider>
-    </React.StrictMode>
-  );
-}
-
-render();
+root.render(
+  <React.StrictMode>
+    <StateProvider>
+      <IpcProvider>
+        <App />
+      </IpcProvider>
+    </StateProvider>
+  </React.StrictMode>
+);

@@ -10,7 +10,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import SearchBar from './SearchBar';
-import { Link, useMatch, useResolvedPath } from 'react-router-dom';
+import { Link, useMatch, useResolvedPath } from 'react-router';
 import musicNoteIcon from '@iconify/icons-fluent/music-note-2-24-regular';
 import musicNoteActiveIcon from '@iconify/icons-fluent/music-note-2-24-filled';
 import FavIcon from '@iconify/icons-fluent/heart-24-regular';

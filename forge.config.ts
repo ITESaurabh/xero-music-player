@@ -17,6 +17,8 @@ const config: ForgeConfig = {
     icon: './src/assets/logo/XeroTunesLogo',
     executableName: 'xero-music-player',
     asar: true,
+    appCategoryType: 'public.app-category.music',
+    name: 'Xero Music Player',
   },
   rebuildConfig: {},
   makers: [
@@ -24,6 +26,7 @@ const config: ForgeConfig = {
       name: 'xero-music-player',
       iconUrl: path.resolve(__dirname, 'src/assets/logo/XeroTunesLogo.ico'),
       setupIcon: path.resolve(__dirname, 'src/assets/logo/XeroTunesLogo.ico'),
+      loadingGif: './src/assets/meowding.gif',
     }),
     new MakerZIP({}, ['darwin']),
     new MakerDeb({ options: { name: 'xero-music-player' } }),
@@ -47,7 +50,7 @@ const config: ForgeConfig = {
           },
           {
             html: './src/mini_player.html',
-            js: './src/mini_player_renderer.js',
+            js: './src/mini_player_renderer.ts',
             name: 'mini_player',
             preload: {
               js: './src/preload.ts',
