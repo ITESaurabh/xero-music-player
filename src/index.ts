@@ -3,6 +3,9 @@ import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import mainIpcs from './main/utils/mainProcess';
+import { OS_WINDOWS } from './config/constants';
+import os from 'os';
+const currOS = os.type();
 
 // Webpack-injected entry point URLs
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -156,10 +159,12 @@ const createWindow = () => {
             webSecurity: process.env.NODE_ENV !== 'development',
           },
         });
-        miniWin!.setAppDetails({
-          appId: 'com.itesaurabh.xmp',
-          relaunchDisplayName: 'Xero Mini Player',
-        });
+        if (currOS === OS_WINDOWS) {
+          miniWin!.setAppDetails({
+            appId: 'com.itesaurabh.xmp',
+            relaunchDisplayName: 'Xero Mini Player',
+          });
+        }
         miniWin!.webContents.once('dom-ready', () => {
           miniWin!.show();
           miniWin!.webContents.send('play-mini', path.resolve(parsedArgs['file']));
@@ -215,10 +220,12 @@ const createWindow = () => {
       },
     });
     mainWin!.setMenu(null);
-    mainWin!.setAppDetails({
-      appId: 'com.itesaurabh.xmp',
-      relaunchDisplayName: 'Xero Music Player',
-    });
+    if (currOS === OS_WINDOWS) {
+      mainWin!.setAppDetails({
+        appId: 'com.itesaurabh.xmp',
+        relaunchDisplayName: 'Xero Music Player',
+      });
+    }
     mainWin!.once('ready-to-show', () => {
       mainWin!.show();
       loadingWin!.hide();
