@@ -1,4 +1,6 @@
-export const getBaseTheme = mode => ({
+import { PaletteMode } from '@mui/material';
+
+export const getBaseTheme = (mode: PaletteMode) => ({
   palette: {
     mode,
     primary: {
@@ -32,7 +34,6 @@ export const getBaseTheme = mode => ({
     },
   },
   typography: {
-    // fontFamily: ['Open Sans', 'sans-serif', '"Apple Color Emoji"'].join(','),
     h1: {
       fontSize: '3.052rem',
       fontWeight: 500,
@@ -58,7 +59,6 @@ export const getBaseTheme = mode => ({
       fontSize: '1rem',
       fontWeight: 500,
     },
-    // Disable h3 variant
   },
   props: {
     MuiAppBar: {
@@ -68,14 +68,10 @@ export const getBaseTheme = mode => ({
   shape: {
     borderRadius: 18,
   },
-  //
-  // Overrides
-  // cssbaseline:
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          // paddingBottom: "8rem",
           height: '100%',
         },
         body: {

@@ -2,11 +2,11 @@
  * Generates NativeImage objects for the Windows thumbnail toolbar
  * using pure Node.js (zlib) - no external deps, no binary asset files.
  */
-const zlib = require('zlib');
-const { nativeImage } = require('electron');
+import zlib from 'zlib';
+import { nativeImage, NativeImage } from 'electron';
 
 // ─── CRC32 (required by PNG spec) ────────────────────────────────────────────
-const crcTable = (() => {
+const crcTable: Uint32Array = (() => {
   const t = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {
     let c = n;
@@ -16,14 +16,14 @@ const crcTable = (() => {
   return t;
 })();
 
-function crc32(buf) {
+function crc32(buf: Buffer): number {
   let crc = 0xffffffff;
   for (let i = 0; i < buf.length; i++) crc = crcTable[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-// ─── PNG chunk builder ────────────────────────────────────────────────────────
-function pngChunk(type, data) {
+// ─── PNG chunk builder ───────────────────────────────────────────────────────
+function pngChunk(type: string, data: Buffer): Buffer {
   const typeBytes = Buffer.from(type, 'ascii');
   const lenBuf = Buffer.allocUnsafe(4);
   lenBuf.writeUInt32BE(data.length, 0);
@@ -33,7 +33,7 @@ function pngChunk(type, data) {
 }
 
 // ─── Build a valid RGBA PNG from a flat pixel buffer ─────────────────────────
-function buildPNG(width, height, pixels) {
+function buildPNG(width: number, height: number, pixels: Buffer): Buffer {
   // IHDR
   const ihdr = Buffer.allocUnsafe(13);
   ihdr.writeUInt32BE(width, 0);
@@ -61,36 +61,29 @@ function buildPNG(width, height, pixels) {
 }
 
 // ─── Pixel helpers ────────────────────────────────────────────────────────────
-function setPixel(p, W, x, y, a = 255) {
+function setPixel(p: Buffer, W: number, x: number, y: number, a = 255): void {
   if (x < 0 || y < 0 || x >= W) return;
   const i = (y * W + x) * 4;
   p[i] = 255; p[i + 1] = 255; p[i + 2] = 255; p[i + 3] = a;
 }
 
-function fillRect(p, W, x0, y0, x1, y1) {
+function fillRect(p: Buffer, W: number, x0: number, y0: number, x1: number, y1: number): void {
   for (let y = y0; y <= y1; y++)
     for (let x = x0; x <= x1; x++) setPixel(p, W, x, y);
-}
-
-// Triangle width at each row for a height-20 triangle of max-width `maxW`
-// centred vertically; returns how many pixels wide that row's slice is.
-function triWidth(y, H, maxW) {
-  return Math.round((1 - Math.abs((2 * y - (H - 1)) / (H - 1))) * maxW);
 }
 
 // --- Icon draw functions (20x20, white on transparent) ---
 const W = 20, H = 20;
 
-function makeIcon(drawFn) {
+function makeIcon(drawFn: (p: Buffer) => void): NativeImage {
   const pixels = Buffer.alloc(W * H * 4, 0); // all transparent
   drawFn(pixels);
   return nativeImage.createFromBuffer(buildPNG(W, H, pixels));
 }
 
 // ▶ Play  — right-pointing solid triangle
-const playIcon = makeIcon(p => {
+export const playIcon: NativeImage = makeIcon(p => {
   for (let y = 0; y < H; y++) {
-    // width at this row: max at centre, 1 at edges
     const half = (H - 1) / 2;
     const w = Math.max(1, Math.round((1 - Math.abs(y - half) / half) * 13));
     for (let x = 3; x < 3 + w; x++) setPixel(p, W, x, y);
@@ -98,15 +91,14 @@ const playIcon = makeIcon(p => {
 });
 
 // ⏸ Pause — two vertical bars
-const pauseIcon = makeIcon(p => {
+export const pauseIcon: NativeImage = makeIcon(p => {
   fillRect(p, W, 3, 2, 7, H - 3);
   fillRect(p, W, 11, 2, 15, H - 3);
 });
 
 // ⏮ Previous — small left triangle + left bar
-const prevIcon = makeIcon(p => {
+export const prevIcon: NativeImage = makeIcon(p => {
   fillRect(p, W, 2, 2, 4, H - 3); // bar
-  // left-pointing triangle
   const tip = 16;
   const half = (H - 1) / 2;
   for (let y = 0; y < H; y++) {
@@ -116,7 +108,7 @@ const prevIcon = makeIcon(p => {
 });
 
 // ⏭ Next — small right triangle + right bar
-const nextIcon = makeIcon(p => {
+export const nextIcon: NativeImage = makeIcon(p => {
   fillRect(p, W, W - 5, 2, W - 3, H - 3); // bar
   const half = (H - 1) / 2;
   for (let y = 0; y < H; y++) {
@@ -124,5 +116,3 @@ const nextIcon = makeIcon(p => {
     for (let x = 3; x < 3 + w; x++) setPixel(p, W, x, y);
   }
 });
-
-module.exports = { playIcon, pauseIcon, prevIcon, nextIcon };

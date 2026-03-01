@@ -2207,6 +2207,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/jsmediatags@npm:^3.9.6":
+  version: 3.9.6
+  resolution: "@types/jsmediatags@npm:3.9.6"
+  checksum: 10c0/53ca911ca623b1b170f738cb91159b385d6d91ee583a0a49fe620db7929a1b43e528aa667cf17f3e54320e33db5a4999950178585bef588a40d37b0d03bcea2a
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:*, @types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.8, @types/json-schema@npm:^7.0.9":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
@@ -2234,6 +2241,22 @@ __metadata:
   version: 1.3.5
   resolution: "@types/mime@npm:1.3.5"
   checksum: 10c0/c2ee31cd9b993804df33a694d5aa3fa536511a49f2e06eeab0b484fef59b4483777dbb9e42a4198a0809ffbf698081fdbca1e5c2218b82b91603dfab10a10fbc
+  languageName: node
+  linkType: hard
+
+"@types/minimist@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@types/minimist@npm:1.2.5"
+  checksum: 10c0/3f791258d8e99a1d7d0ca2bda1ca6ea5a94e5e7b8fc6cde84dd79b0552da6fb68ade750f0e17718f6587783c24254bbca0357648dd59dc3812c150305cabdc46
+  languageName: node
+  linkType: hard
+
+"@types/mui-image@npm:^1.0.5":
+  version: 1.0.5
+  resolution: "@types/mui-image@npm:1.0.5"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 10c0/ac81f6e290571a7534271464203d6ab92d997ebb266c35b7611adbcc12c3ee5a0f65d67e072f234f3689cc38903e8c94d785fc164ca987f19e6b33b51083daed
   languageName: node
   linkType: hard
 
@@ -2328,7 +2351,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:^19.2.14":
+"@types/react@npm:*, @types/react@npm:^19.2.14":
   version: 19.2.14
   resolution: "@types/react@npm:19.2.14"
   dependencies:
@@ -11190,6 +11213,9 @@ __metadata:
     "@tanstack/react-query": "npm:^5.84.2"
     "@tanstack/react-query-devtools": "npm:^5.84.2"
     "@types/better-sqlite3": "npm:^7.6.13"
+    "@types/jsmediatags": "npm:^3.9.6"
+    "@types/minimist": "npm:^1.2.5"
+    "@types/mui-image": "npm:^1.0.5"
     "@types/node": "npm:^25.3.0"
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"

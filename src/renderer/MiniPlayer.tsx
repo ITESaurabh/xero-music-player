@@ -15,11 +15,11 @@ import './styles/mini_player.scss';
 const root = createRoot(document.getElementById('app')!);
 
 const App = () => {
-  let isDarkThemePreferred = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDarkThemePreferred = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   const { dispatch } = useContext(store);
   const currTheme = getTheme();
-  let themePref = !isDarkThemePreferred ? 'light' : 'dark';
+  const themePref: 'light' | 'dark' = !isDarkThemePreferred ? 'light' : 'dark';
   const darkModeTheme = createTheme(getBaseTheme(themePref));
   const theme = responsiveFontSizes(darkModeTheme);
 

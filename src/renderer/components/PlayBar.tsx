@@ -10,20 +10,20 @@ import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
 import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import { Icon } from '@iconify/react';
-import { Card, Hidden, useMediaQuery } from '@mui/material';
+import { Card, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import DiscordIcon from 'svg-react-loader?name=DiscordIcon!../../img/discord-logo.svg';
 import { RepeatRounded, ShuffleRounded } from '@mui/icons-material';
 import ShuffleOnRoundedIcon from '@mui/icons-material/ShuffleOnRounded';
 import RepeatOneOnRoundedIcon from '@mui/icons-material/RepeatOneOnRounded';
 import RepeatOnRoundedIcon from '@mui/icons-material/RepeatOnRounded';
-import { store } from '../utils/store';
+import { store, RepeatMode } from '../utils/store';
 import { getVolumeLevel, setVolumeLevel } from '../utils/LocStoreUtil';
-var jsmediatags = require('jsmediatags');
+import jsmediatags from 'jsmediatags';
 import speaker132Regular from '@iconify/icons-fluent/speaker-1-32-regular';
 import speaker232Regular from '@iconify/icons-fluent/speaker-2-32-regular';
 import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
-import Image from 'mui-image';
+import { Image } from 'mui-image';
 import { DEFAULT_AA } from '../../config/constants';
 const { ipcRenderer } = window.require('electron');
 
@@ -63,9 +63,9 @@ export default function PlayBar() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { state, dispatch } = useContext(store);
-  let defaultVol = getVolumeLevel();
+  const defaultVol = getVolumeLevel();
   const [songPath, setSongPath] = useState(null);
-  const audioRef = useRef();
+  const audioRef = useRef<HTMLAudioElement>(null);
   const fadeIntervalRef = useRef(null);
   const volumeRef = useRef(defaultVol / 100);
   const muteVolumeRef = useRef(false);
@@ -109,7 +109,7 @@ export default function PlayBar() {
               tags.picture && tags.picture.data
                 ? (() => {
                     const base64String = Buffer.from(tags.picture.data).toString('base64');
-                    return `data:image/${tags.picture.type || 'jpg'};base64,${base64String}`;
+                    return `data:image/${tags.picture.format || 'image/jpeg'};base64,${base64String}`;
                   })()
                 : DEFAULT_AA,
           });
@@ -120,11 +120,11 @@ export default function PlayBar() {
       });
       // Play only after loadedmetadata
       const handleLoadedMetadata = () => {
-        audioRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => undefined);
       };
       audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
       return () => {
-        audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audioRef.current?.removeEventListener('loadedmetadata', handleLoadedMetadata);
       };
     }
   }, [songPath, state?.queue]);
@@ -195,7 +195,7 @@ export default function PlayBar() {
           if (state.repeatMode === 'one') {
             // Repeat the current track
             audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(() => {});
+            audioRef.current.play().catch(() => undefined);
           } else if (state.queueIndex < state.queue.length - 1) {
             dispatch({ type: 'NEXT_TRACK' });
           } else if (state.repeatMode === 'all') {
@@ -239,7 +239,7 @@ export default function PlayBar() {
     } else {
       const targetVol = muteVolumeRef.current ? 0 : volumeRef.current;
       audio.volume = 0;
-      audio.play().catch(() => {});
+      audio.play().catch(() => undefined);
       let step = 0;
       fadeIntervalRef.current = setInterval(() => {
         step++;
@@ -280,7 +280,9 @@ export default function PlayBar() {
         playbackRate: audioRef.current?.playbackRate || 1,
         position: position,
       });
-    } catch {}
+    } catch {
+      /* noop */
+    }
   }, [position, duration]);
 
   // Register OS media key / hardware button action handlers
@@ -311,10 +313,7 @@ export default function PlayBar() {
     navigator.mediaSession.setActionHandler('seekforward', details => {
       const skipTime = details.seekOffset || 10;
       if (audioRef.current) {
-        audioRef.current.currentTime = Math.min(
-          duration,
-          audioRef.current.currentTime + skipTime
-        );
+        audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + skipTime);
       }
     });
     navigator.mediaSession.setActionHandler('seekbackward', details => {
@@ -325,12 +324,23 @@ export default function PlayBar() {
     });
 
     return () => {
-      [
-        'play', 'pause', 'stop',
-        'nexttrack', 'previoustrack',
-        'seekto', 'seekforward', 'seekbackward',
-      ].forEach(action => {
-        try { navigator.mediaSession.setActionHandler(action, null); } catch {}
+      (
+        [
+          'play',
+          'pause',
+          'stop',
+          'nexttrack',
+          'previoustrack',
+          'seekto',
+          'seekforward',
+          'seekbackward',
+        ] as MediaSessionAction[]
+      ).forEach(action => {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {
+          /* noop */
+        }
       });
     };
   }, [dispatch, duration]);
@@ -345,16 +355,16 @@ export default function PlayBar() {
   // Listen for button clicks from the Windows thumbnail toolbar
   useEffect(() => {
     const onToggle = () => setPaused(prev => !prev);
-    const onNext   = () => dispatch({ type: 'NEXT_TRACK' });
-    const onPrev   = () => dispatch({ type: 'PREV_TRACK' });
+    const onNext = () => dispatch({ type: 'NEXT_TRACK' });
+    const onPrev = () => dispatch({ type: 'PREV_TRACK' });
 
     ipcRenderer.on('thumbar-toggle', onToggle);
-    ipcRenderer.on('thumbar-next',   onNext);
-    ipcRenderer.on('thumbar-prev',   onPrev);
+    ipcRenderer.on('thumbar-next', onNext);
+    ipcRenderer.on('thumbar-prev', onPrev);
     return () => {
       ipcRenderer.removeListener('thumbar-toggle', onToggle);
-      ipcRenderer.removeListener('thumbar-next',   onNext);
-      ipcRenderer.removeListener('thumbar-prev',   onPrev);
+      ipcRenderer.removeListener('thumbar-next', onNext);
+      ipcRenderer.removeListener('thumbar-prev', onPrev);
     };
   }, [dispatch]);
   // ── End Thumbnail toolbar sync ───────────────────────────────────────
@@ -363,7 +373,7 @@ export default function PlayBar() {
     dispatch({ type: 'SET_SHUFFLE', payload: !state.isShuffle });
   };
   const handleRepeat = () => {
-    const modes = ['off', 'all', 'one'];
+    const modes: RepeatMode[] = ['off', 'all', 'one'];
     const currentIndex = modes.indexOf(state.repeatMode);
     const nextMode = modes[(currentIndex + 1) % modes.length];
     dispatch({ type: 'SET_REPEAT_MODE', payload: nextMode });
@@ -375,12 +385,9 @@ export default function PlayBar() {
     return `${minute}:${secondLeft < 10 ? `0${secondLeft}` : secondLeft}`;
   }
   const mainIconColor = theme.palette.mode === 'dark' ? '#fff' : '#000';
-  const lightIconColor =
-    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-
   // Long press logic for skip buttons
-  const longPressTimeout = useRef();
-  const longPressInterval = useRef();
+  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const handlePrevPress = () => {
     dispatch({ type: 'PREV_TRACK' });
   };
@@ -408,7 +415,7 @@ export default function PlayBar() {
     }
   };
 
-  const clearLongPress = callback => {
+  const clearLongPress = (callback?: () => void) => {
     if (longPressTimeout.current) {
       clearTimeout(longPressTimeout.current);
       longPressTimeout.current = null;
@@ -475,13 +482,10 @@ export default function PlayBar() {
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
             <CoverImage>
               <Image
-                id={songMeta.title}
                 src={songMeta.albumArt}
                 className="no-select no-drag"
                 showLoading
-                sx={{
-                  borderRadius: '0.4375rem',
-                }}
+                style={{ borderRadius: '0.4375rem' }}
                 fit="contain"
               />
             </CoverImage>
@@ -490,20 +494,29 @@ export default function PlayBar() {
                 variant="h6"
                 component="h6"
                 noWrap={!isPhone}
+                maxWidth={'360px'}
+                title={state?.track?.Title as string}
                 className="no-select no-drag"
               >
-                <b>{state?.track?.Title}</b>
+                <b>{state?.track?.Title as string}</b>
               </Typography>
               <Typography
                 variant="body1"
                 color="text.secondary"
                 fontWeight={500}
                 noWrap={!isPhone}
+                maxWidth={'360px'}
+                title={songMeta.artist}
                 className="no-select no-drag"
               >
                 {songMeta.artist}
               </Typography>
-              <Typography noWrap={!isPhone} className="no-select no-drag">
+              <Typography
+                noWrap={!isPhone}
+                maxWidth={'360px'}
+                className="no-select no-drag"
+                title={songMeta.album}
+              >
                 {songMeta.album}
               </Typography>
             </Box>
@@ -518,9 +531,10 @@ export default function PlayBar() {
               min={0}
               step={1}
               max={duration}
-              onChange={(_, value) => setPosition(value)}
+              onChange={(_, value) => setPosition(Array.isArray(value) ? value[0] : value)}
               onChangeCommitted={(_, value) => {
-                audioRef.current.currentTime = value;
+                if (audioRef.current)
+                  audioRef.current.currentTime = Array.isArray(value) ? value[0] : value;
                 setIsSeeking(false);
               }}
               onMouseDown={() => setIsSeeking(true)}
@@ -677,7 +691,7 @@ export default function PlayBar() {
               )}
             </IconButton>
             <IconButton onClick={() => null} aria-label="discord visibility">
-              <DiscordIcon style={{ width: 25, height: 25 }} />
+              <DiscordIcon viewBox="0 0 70 60" width={25} height={25} />
             </IconButton>
           </Box>
         </Grid>

@@ -2,6 +2,7 @@ import React, { lazy } from 'react';
 import Layout from '../components/Layout';
 import { Navigate } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
+
 const AllSongs = lazy(() => import('../views/AllSongs'));
 const Albums = lazy(() => import('../views/Albums'));
 const Search = lazy(() => import('../views/Search'));
@@ -30,7 +31,7 @@ const routes = [
       {
         index: true,
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <AllSongs />
           </React.Suspense>
         ),
@@ -38,7 +39,7 @@ const routes = [
       {
         path: 'favourites',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -46,7 +47,7 @@ const routes = [
       {
         path: 'playlists',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -54,7 +55,7 @@ const routes = [
       {
         path: 'albums',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Albums />
           </React.Suspense>
         ),
@@ -62,7 +63,7 @@ const routes = [
       {
         path: 'artists',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -70,7 +71,7 @@ const routes = [
       {
         path: 'album-artists',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -78,7 +79,7 @@ const routes = [
       {
         path: 'folders',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -86,7 +87,7 @@ const routes = [
       {
         path: 'folder-hierarchy',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -94,7 +95,7 @@ const routes = [
       {
         path: 'genres',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -102,7 +103,7 @@ const routes = [
       {
         path: 'years',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Search />
           </React.Suspense>
         ),
@@ -110,7 +111,7 @@ const routes = [
       {
         path: 'settings',
         element: (
-          <React.Suspense fallback={BigLoader}>
+          <React.Suspense fallback={<BigLoader />}>
             <Settings />
           </React.Suspense>
         ),
@@ -120,4 +121,4 @@ const routes = [
   { path: '*', element: <Navigate to="main_window" /> },
 ];
 
-export default routes /* .filter((route) => route.enabled) */;
+export default routes;

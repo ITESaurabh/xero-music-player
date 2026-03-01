@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import SearchBar from './SearchBar';
 import { Link, useMatch, useResolvedPath } from 'react-router';
+import { IconifyIcon, Icon } from '@iconify/react';
 import musicNoteIcon from '@iconify/icons-fluent/music-note-2-24-regular';
 import musicNoteActiveIcon from '@iconify/icons-fluent/music-note-2-24-filled';
 import FavIcon from '@iconify/icons-fluent/heart-24-regular';
@@ -33,10 +34,27 @@ import yearsIcon from '@iconify/icons-fluent/timer-24-regular';
 import yearsActiveIcon from '@iconify/icons-fluent/timer-24-filled';
 import settingsIcon from '@iconify/icons-fluent/settings-24-regular';
 import settingsActiveIcon from '@iconify/icons-fluent/settings-24-filled';
-import { Icon } from '@iconify/react';
 import { store } from '../utils/store';
+import { Theme } from '@mui/material/styles';
 
-const menuItems = [
+interface MenuItem {
+  title: string;
+  href: string;
+  icon: IconifyIcon | string;
+  iconActive: IconifyIcon | string;
+  divider?: boolean;
+}
+
+interface MainDrawerProps {
+  tempDrawer?: boolean;
+}
+
+interface CustomLinkProps {
+  item: MenuItem;
+  [key: string]: unknown;
+}
+
+const menuItems: MenuItem[] = [
   {
     title: 'All Songs',
     href: '/main_window',
@@ -101,9 +119,10 @@ const menuItems = [
   },
 ];
 
-function MainDrawer({ tempDrawer }) {
+function MainDrawer({ tempDrawer }: MainDrawerProps) {
   const { state, dispatch } = useContext(store);
   const theme = useTheme();
+
   const toggleDrawer = () => {
     dispatch({ type: 'SET_MENU_EXPANDED', payload: !state.isMenuExpanded });
   };
@@ -113,16 +132,14 @@ function MainDrawer({ tempDrawer }) {
       <List
         sx={{
           width: '100%',
-          //   maxWidth: 600,
           position: 'relative',
           overflow: 'auto',
           p: 1,
           '& ul': { padding: 0 },
-          '&::-webkit-scrollbar': { display: 'none' }, // Hide scrollbar for Chrome, Safari and Opera
-          msOverflowStyle: 'none', // Hide scrollbar for IE and Edge
+          '&::-webkit-scrollbar': { display: 'none' },
+          msOverflowStyle: 'none',
         }}
         subheader={<li />}
-        // sx={{ p: 1 }}
       >
         <ListSubheader
           disableGutters
@@ -156,11 +173,12 @@ function MainDrawer({ tempDrawer }) {
   );
 }
 
-function CustomLink({ item, ...props }) {
-  let resolved = useResolvedPath(item.href);
-  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
+function CustomLink({ item, ...props }: CustomLinkProps) {
+  const resolved = useResolvedPath(item.href);
+  const isPhone = useMediaQuery(({ breakpoints }: Theme) => breakpoints.down('md'));
   const { dispatch } = useContext(store);
-  let match = useMatch({ path: resolved.pathname, end: true });
+  const match = useMatch({ path: resolved.pathname, end: true });
+
   return (
     <>
       <ListItemButton
@@ -171,8 +189,7 @@ function CustomLink({ item, ...props }) {
           isPhone ? () => dispatch({ type: 'SET_MENU_EXPANDED', payload: false }) : undefined
         }
         to={item.href}
-        // dense
-        {...props}
+        {...(props as object)}
       >
         <ListItemIcon sx={{ mr: -1 }}>
           <Icon icon={match ? item.iconActive : item.icon} height={'1.5rem'} />

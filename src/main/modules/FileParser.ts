@@ -1,15 +1,59 @@
 import fs from 'fs';
 import path from 'path';
+import jsmediatags from 'jsmediatags';
 import { ALBUM_ART_DIR } from '../../config/core_config';
 import { ArrayBuff2ImgBuff } from '../utils/misc';
-const supportedFileTypes = ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.m4a'];
-var jsmediatags = require('jsmediatags');
 
-export function parseDir(dirPath, arrayOfFiles) {
-  arrayOfFiles = arrayOfFiles || [];
-  let files = fs.readdirSync(dirPath);
+const supportedFileTypes: string[] = ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.m4a'];
 
-  (function iterator(files) {
+export interface MusicFileInfo {
+  tagType: string;
+  path: string;
+  fileName: string;
+  fileExt: string;
+  fileSize: number;
+  folderName: string;
+  folderpath: string;
+}
+
+export interface MusicTags {
+  title: string | undefined;
+  artist: string | undefined;
+  album: string | undefined;
+  track: string | undefined;
+  genre: string | undefined;
+  year: string | undefined;
+  albumArt: string;
+}
+
+export interface MusicInfo {
+  fileInfo: MusicFileInfo;
+  tags: MusicTags;
+}
+
+export interface PictureData {
+  data: number[];
+  format: string;
+  type?: string;
+}
+
+export interface JsmediatagsTag {
+  type: string;
+  tags: {
+    title?: string;
+    artist?: string;
+    album?: string;
+    track?: string;
+    genre?: string;
+    year?: string;
+    picture?: PictureData;
+  };
+}
+
+export function parseDir(dirPath: string, arrayOfFiles: string[] = []): string[] {
+  const files = fs.readdirSync(dirPath);
+
+  (function iterator(files: string[]) {
     files.forEach(function (file) {
       const isSupported = supportedFileTypes.includes(path.parse(file).ext);
       if (fs.statSync(dirPath + '/' + file).isDirectory()) {
@@ -23,29 +67,19 @@ export function parseDir(dirPath, arrayOfFiles) {
     return arrayOfFiles;
   })(files);
 
-  // enable below code in case of Route Duplication
-  // TODO: Prevent Duplication of Songs in the Playlist || aka Duplication Detector
-
-  //  finalfiles.forEach((el, ind, array) => {
-  //     if (array.indexOf(el) !== array.lastIndexOf(el)) {
-  //        array.splice(ind, 1);
-  //     }
-  //  });
-
   return arrayOfFiles;
 }
 
-function removeMIME(str) {
+function removeMIME(str: string): string {
   return str.replace(/(\.mp3)|(\.m4a)|(\.ogg)|(\.wav)/gi, '');
 }
 
-export function parseMusic(musicPath) {
-  //return new promise with parsed music
-  return new Promise((resolve, reject) => {
-    let music = {
+export function parseMusic(musicPath: string): Promise<MusicInfo> {
+  return new Promise(resolve => {
+    const music: MusicInfo = {
       fileInfo: {
-        tagType: '', // ID3 = mp3 || APE = wav || OGG = ogg || FLAC = flac || M4A = m4a
-        path: musicPath, // Explicit path
+        tagType: '',
+        path: musicPath,
         fileName: path.parse(musicPath).name,
         fileExt: path.parse(musicPath).ext,
         fileSize: fs.statSync(musicPath).size,
@@ -64,8 +98,8 @@ export function parseMusic(musicPath) {
     };
 
     jsmediatags.read(musicPath, {
-      onSuccess: function (tag) {
-        let { type, tags } = tag;
+      onSuccess: function (tag: JsmediatagsTag) {
+        const { type, tags } = tag;
         console.log('MUSC:', music, tags);
         music.fileInfo.tagType = type;
         music.tags.title = tags.title;
@@ -76,7 +110,6 @@ export function parseMusic(musicPath) {
         music.tags.year = tags.year;
         if (tag && tags.picture && tags.picture.data) {
           tags.picture.type = tags.picture.type ? tags.picture.type.replace(/image\//g, '') : 'jpg';
-          // console.log('final', tags.picture.type);
 
           const albumArtPath = path.join(
             ALBUM_ART_DIR,
@@ -84,22 +117,22 @@ export function parseMusic(musicPath) {
           );
 
           const base64Img = ArrayBuff2ImgBuff(tags.picture);
-          let m = base64Img.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-          let b = Buffer.from(m[2], 'base64');
-
-          fs.writeFile(String(albumArtPath), b, function (err) {
-            if (err) {
-              console.log(tags.title, err);
-            } else {
-              console.log('The file has been saved!');
-            }
-          });
-          // writeImageBuffer(tags.picture.data, albumArtPath);
+          const m = base64Img.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+          if (m) {
+            const b = Buffer.from(m[2], 'base64');
+            fs.writeFile(String(albumArtPath), b, function (err) {
+              if (err) {
+                console.log(tags.title, err);
+              } else {
+                console.log('The file has been saved!');
+              }
+            });
+          }
           music.tags.albumArt = albumArtPath;
         }
         resolve(music);
       },
-      onError: function (error) {
+      onError: function (error: { type: string; info: string }) {
         console.log(':(', musicPath, path.parse(musicPath).name, error.type, error.info);
       },
     });

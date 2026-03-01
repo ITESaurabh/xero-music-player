@@ -1,4 +1,4 @@
-export const formatTime = time => {
+export const formatTime = (time: number): string => {
   if (time && !isNaN(time)) {
     const minutes = Math.floor(time / 60);
     const formatMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
@@ -9,10 +9,14 @@ export const formatTime = time => {
   return '00:00';
 };
 
-export function debounce(func, delay) {
-  let debounceTimer;
-  return function (...args) {
-    const context = this;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  return function (this: unknown, ...args: Parameters<T>) {
+    const context = this as unknown;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => func.apply(context, args), delay);
   };

@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from 'react';
 import Titlebar from './Titlebar';
-import { styled } from '@mui/material/styles';
+import { styled, Theme } from '@mui/material/styles';
 import MuiDrawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
 import { Paper, Stack, useMediaQuery } from '@mui/material';
@@ -12,9 +12,11 @@ import PlayBar from './PlayBar';
 import MainDrawer from './MainDrawer';
 import { store } from '../utils/store';
 import SearchDialog from './SearchDialog';
+
 const drawerWidth = 320;
+
 const Drawer = styled(MuiDrawer, { shouldForwardProp: prop => prop !== 'open' })(
-  ({ theme, open }) => ({
+  ({ theme, open }: { theme: Theme; open?: boolean }) => ({
     '& .MuiDrawer-paper': {
       position: 'relative',
       whiteSpace: 'nowrap',
@@ -40,8 +42,9 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: prop => prop !== 'open' })
 );
 
 function Layout() {
-  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
+  const isPhone = useMediaQuery(({ breakpoints }: Theme) => breakpoints.down('md'));
   const { state, dispatch } = useContext(store);
+
   useEffect(() => {
     if (isPhone) {
       dispatch({ type: 'SET_MENU_EXPANDED', payload: false });
@@ -49,6 +52,7 @@ function Layout() {
       dispatch({ type: 'SET_MENU_EXPANDED', payload: true });
     }
   }, [isPhone]);
+
   return (
     <Box height={'100%'}>
       <Titlebar />
@@ -65,8 +69,6 @@ function Layout() {
               paddingTop: '32px',
               backgroundColor: 'transparent',
               borderRight: 'none',
-              '&::-webkit-scrollbar': { display: 'none' },
-              msOverflowStyle: 'none',
             },
           }}
           open={state.isMenuExpanded}

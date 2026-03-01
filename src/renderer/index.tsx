@@ -7,8 +7,8 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-import { StateProvider } from './utils/store.js';
-import { IpcProvider } from './state/ipc.js';
+import { StateProvider } from './utils/store';
+import { IpcProvider } from './state/ipc';
 
 const root = createRoot(document.getElementById('app')!);
 

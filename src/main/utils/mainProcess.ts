@@ -1,13 +1,24 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
-const { prevIcon, nextIcon, playIcon, pauseIcon } = require('../thumbarIcons');
+import { prevIcon, nextIcon, playIcon, pauseIcon } from '../thumbarIcons';
 import { parseDir, parseMusic } from '../modules/FileParser';
-const db = require('../../database');
-const path = require('path');
-const fs = require('fs');
-const { fork } = require('child_process');
-const { APP_CONF_FOLDER, MUSIC_DIR, ALBUM_ART_DIR, ARTIST_ART_DIR } = require('../../config/core_config');
+import dbModule from '../../database';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db: any = dbModule;
+import path from 'path';
+import fs from 'fs';
+import { fork } from 'child_process';
+import {
+  APP_CONF_FOLDER,
+  MUSIC_DIR,
+  ALBUM_ART_DIR,
+  ARTIST_ART_DIR,
+} from '../../config/core_config';
 
-function sendMessageToRendererProcess(window, message, payload) {
+function sendMessageToRendererProcess(
+  window: BrowserWindow,
+  message: string,
+  payload?: unknown
+): void {
   window.webContents.send(message, payload);
 }
 export default function mainIpcs(mainWin) {
@@ -85,17 +96,23 @@ export default function mainIpcs(mainWin) {
         {
           tooltip: 'Previous',
           icon: prevIcon,
-          click() { sendMessageToRendererProcess(mainWin, 'thumbar-prev'); },
+          click() {
+            sendMessageToRendererProcess(mainWin, 'thumbar-prev');
+          },
         },
         {
           tooltip: isPlaying ? 'Pause' : 'Play',
           icon: isPlaying ? pauseIcon : playIcon,
-          click() { sendMessageToRendererProcess(mainWin, 'thumbar-toggle'); },
+          click() {
+            sendMessageToRendererProcess(mainWin, 'thumbar-toggle');
+          },
         },
         {
           tooltip: 'Next',
           icon: nextIcon,
-          click() { sendMessageToRendererProcess(mainWin, 'thumbar-next'); },
+          click() {
+            sendMessageToRendererProcess(mainWin, 'thumbar-next');
+          },
         },
       ]);
     } catch (e) {
@@ -151,7 +168,7 @@ export default function mainIpcs(mainWin) {
       APP_CONF_FOLDER,
       MUSIC_DIR,
       ALBUM_ART_DIR,
-      ARTIST_ART_DIR
+      ARTIST_ART_DIR,
     };
 
     // Spawn a worker process for scanning
@@ -159,10 +176,11 @@ export default function mainIpcs(mainWin) {
     worker.send({ folders, config });
 
     return new Promise((resolve, reject) => {
-      worker.on('message', msg => {
+      worker.on('message', rawMsg => {
+        const msg = rawMsg as { success: boolean; scanned: number; error: string };
         if (msg.success) {
           console.log(`Scanned ${msg.scanned} files successfully.`);
-          
+
           resolve({ success: true, scanned: msg.scanned });
         } else {
           reject(msg.error);
@@ -225,7 +243,8 @@ export default function mainIpcs(mainWin) {
 )`
   ).run();
 
-  db.prepare(`
+  db.prepare(
+    `
   CREATE TABLE IF NOT EXISTS Track (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Uri TEXT,
@@ -248,7 +267,8 @@ export default function mainIpcs(mainWin) {
     Version INTEGER,
     FolderPath TEXT
   )
-`).run();
+`
+  ).run();
 
   ipcMain.handle('add-music-folder', async e => {
     const result = await dialog.showOpenDialog(mainWin, {
@@ -294,7 +314,9 @@ export default function mainIpcs(mainWin) {
   });
 
   ipcMain.handle('get-all-songs', () => {
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       SELECT
         Track.Id,
         Track.Title,
@@ -312,7 +334,9 @@ export default function mainIpcs(mainWin) {
       LEFT JOIN Album ON Track.AlbumId = Album.Id
       LEFT JOIN Genre ON Track.GenreId = Genre.Id
       ORDER BY Track.Title COLLATE NOCASE
-    `).all();
+    `
+      )
+      .all();
   });
 
   // Search functionality
@@ -335,7 +359,9 @@ export default function mainIpcs(mainWin) {
 
     try {
       // Search songs
-      const songs = db.prepare(`
+      const songs = db
+        .prepare(
+          `
         SELECT
           Track.Id,
           Track.Title,
@@ -357,10 +383,14 @@ export default function mainIpcs(mainWin) {
           CASE WHEN LOWER(Track.Title) = ? THEN 0 ELSE 1 END,
           Track.Title COLLATE NOCASE
         LIMIT 10
-      `).all(searchPattern, exactQuery);
+      `
+        )
+        .all(searchPattern, exactQuery);
 
       // Search albums
-      const albums = db.prepare(`
+      const albums = db
+        .prepare(
+          `
         SELECT
           Album.Id,
           Album.Title,
@@ -377,10 +407,14 @@ export default function mainIpcs(mainWin) {
           CASE WHEN LOWER(Album.Title) = ? THEN 0 ELSE 1 END,
           Album.Title COLLATE NOCASE
         LIMIT 10
-      `).all(searchPattern, exactQuery);
+      `
+        )
+        .all(searchPattern, exactQuery);
 
       // Search artists
-      const artists = db.prepare(`
+      const artists = db
+        .prepare(
+          `
         SELECT
           Artist.Id,
           Artist.Name,
@@ -394,10 +428,14 @@ export default function mainIpcs(mainWin) {
           CASE WHEN LOWER(Artist.Name) = ? THEN 0 ELSE 1 END,
           Artist.Name COLLATE NOCASE
         LIMIT 10
-      `).all(searchPattern, exactQuery);
+      `
+        )
+        .all(searchPattern, exactQuery);
 
       // Search album artists (same as artists for now)
-      const albumArtists = db.prepare(`
+      const albumArtists = db
+        .prepare(
+          `
         SELECT
           Artist.Id,
           Artist.Name,
@@ -411,10 +449,14 @@ export default function mainIpcs(mainWin) {
           CASE WHEN LOWER(Artist.Name) = ? THEN 0 ELSE 1 END,
           Artist.Name COLLATE NOCASE
         LIMIT 10
-      `).all(searchPattern, exactQuery);
+      `
+        )
+        .all(searchPattern, exactQuery);
 
       // Search genres
-      const genres = db.prepare(`
+      const genres = db
+        .prepare(
+          `
         SELECT
           Genre.Id,
           Genre.Name,
@@ -427,10 +469,14 @@ export default function mainIpcs(mainWin) {
           CASE WHEN LOWER(Genre.Name) = ? THEN 0 ELSE 1 END,
           Genre.Name COLLATE NOCASE
         LIMIT 10
-      `).all(searchPattern, exactQuery);
+      `
+        )
+        .all(searchPattern, exactQuery);
 
       // Search years
-      const years = db.prepare(`
+      const years = db
+        .prepare(
+          `
         SELECT
           Track.Year AS Name,
           COUNT(Track.Id) AS SongCount
@@ -439,10 +485,14 @@ export default function mainIpcs(mainWin) {
         GROUP BY Track.Year
         ORDER BY Track.Year DESC
         LIMIT 10
-      `).all(searchPattern);
+      `
+        )
+        .all(searchPattern);
 
       // Search folders
-      const folders = db.prepare(`
+      const folders = db
+        .prepare(
+          `
         SELECT
           Track.FolderPath AS Name,
           COUNT(Track.Id) AS SongCount
@@ -453,7 +503,9 @@ export default function mainIpcs(mainWin) {
           CASE WHEN LOWER(Track.FolderPath) = ? THEN 0 ELSE 1 END,
           Track.FolderPath COLLATE NOCASE
         LIMIT 10
-      `).all(searchPattern, exactQuery);
+      `
+        )
+        .all(searchPattern, exactQuery);
 
       // Playlists would need a separate table - returning empty for now
       const playlists = [];
@@ -509,7 +561,7 @@ export default function mainIpcs(mainWin) {
         })),
         playlists,
       };
-      
+
       return results;
     } catch (error) {
       return {
@@ -523,5 +575,32 @@ export default function mainIpcs(mainWin) {
         playlists: [],
       };
     }
+  });
+
+  // ── Auto-scan library folders on app load ─────────────────────────────────
+  mainWin.webContents.once('did-finish-load', () => {
+    const folders = db.prepare('SELECT * FROM MusicFolder').all();
+    if (!folders.length) return;
+
+    const config = {
+      APP_CONF_FOLDER,
+      MUSIC_DIR,
+      ALBUM_ART_DIR,
+      ARTIST_ART_DIR,
+    };
+
+    const worker = fork(
+      path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js')
+    );
+    worker.send({ folders, config });
+
+    worker.on('message', rawMsg => {
+      const msg = rawMsg as { success: boolean; scanned: number; error: string };
+      if (msg.success) {
+        console.log(`[Auto-scan] Found ${msg.scanned} new/updated file(s).`);
+        sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });
+      }
+    });
+    worker.on('error', err => console.error('[Auto-scan] Worker error:', err));
   });
 }
