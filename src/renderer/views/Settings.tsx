@@ -22,27 +22,37 @@ import foldersIcon from '@iconify/icons-fluent/folder-24-regular';
 import syncIcon from '@iconify/icons-fluent/arrow-sync-24-regular';
 import addFolderIcon from '@iconify/icons-fluent/folder-add-24-regular';
 import { useIpc } from '../state/ipc';
-import { sendMessageToNode } from '../../main/utils/renProcess';
+import { motion } from 'motion/react';
 
-const Settings = () => {
-  const [expanded, setExpanded] = React.useState(false);
-  const [folders, setFolders] = React.useState([]);
+interface MusicFolder {
+  Id: string | number;
+  Uri: string;
+}
+
+const Settings: React.FC = () => {
+  const [expanded, setExpanded] = React.useState<boolean>(false);
+  const [folders, setFolders] = React.useState<MusicFolder[]>([]);
   const { invokeEventToMainProcess } = useIpc();
 
   React.useEffect(() => {
     invokeEventToMainProcess('get-music-folders')
-      .then(setFolders)
-      .catch(err => {
+      .then((data: unknown) => setFolders(data as MusicFolder[]))
+      .catch((err: unknown) => {
         console.error('Error fetching music folders:', err);
       });
-    // console.log(sendMessageToNode('get-music-folders'));
   }, []);
 
-  const handleExpansion = () => {
+  const handleExpansion = (): void => {
     setExpanded(prevExpanded => !prevExpanded);
   };
+
   return (
-    <>
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -20, opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <PageToolbar title="Settings" />
       <Container maxWidth="xl">
         <List
@@ -59,13 +69,14 @@ const Settings = () => {
               color="primary"
               fullWidth
               onClick={() => {
-                invokeEventToMainProcess('scan-media')
-                  .then((data) => {
-                    console.log("Media scan completed:", data);
-                    
-                    invokeEventToMainProcess('get-music-folders').then(setFolders);
+                invokeEventToMainProcess('scan-media', undefined)
+                  .then((data: unknown) => {
+                    console.log('Media scan completed:', data);
+                    invokeEventToMainProcess('get-music-folders', undefined).then((d: unknown) =>
+                      setFolders(d as MusicFolder[])
+                    );
                   })
-                  .catch(err => {
+                  .catch((err: unknown) => {
                     console.error('Error rescanning media:', err);
                   });
               }}
@@ -104,7 +115,6 @@ const Settings = () => {
                   alignItems={'center'}
                   direction={'row'}
                   width={'100%'}
-                  //   sx={{ backgroundColor: 'red' }}
                 >
                   {' '}
                   <ListItemIcon sx={{ mr: -2 }}>
@@ -119,11 +129,13 @@ const Settings = () => {
                   size="small"
                   fullWidth
                   onClick={() =>
-                    invokeEventToMainProcess('add-music-folder')
-                      .then(res => {
-                        invokeEventToMainProcess('get-music-folders').then(setFolders);
+                    invokeEventToMainProcess('add-music-folder', undefined)
+                      .then(() => {
+                        invokeEventToMainProcess('get-music-folders', undefined).then((d: unknown) =>
+                          setFolders(d as MusicFolder[])
+                        );
                       })
-                      .catch(err => {
+                      .catch((err: unknown) => {
                         console.error('Error adding music folder:', err);
                       })
                   }
@@ -150,7 +162,9 @@ const Settings = () => {
                               invokeEventToMainProcess('remove-music-folder', {
                                 Id: folder.Id,
                               }).then(() =>
-                                invokeEventToMainProcess('get-music-folders').then(setFolders)
+                                invokeEventToMainProcess('get-music-folders', undefined).then((d: unknown) =>
+                                  setFolders(d as MusicFolder[])
+                                )
                               );
                             }}
                           >
@@ -158,7 +172,7 @@ const Settings = () => {
                           </Button>
                         }
                       >
-                        <ListItemText disableGutters primary={folder.Uri} />
+                        <ListItemText primary={folder.Uri} />
                       </ListItem>
                     ))}
                   </>
@@ -168,7 +182,7 @@ const Settings = () => {
           </ListItem>
         </List>
       </Container>
-    </>
+    </motion.div>
   );
 };
 

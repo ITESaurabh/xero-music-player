@@ -1,26 +1,33 @@
 import React, { useContext, useRef, useEffect } from 'react';
 import {
   Container,
-  styled,
   Button,
   useMediaQuery,
-  ButtonBase,
   ListItemButton,
   Box,
   Grid,
+  LinearProgress,
+  Theme,
+  Typography,
 } from '@mui/material';
 import filterIcon from '@iconify/icons-fluent/filter-24-filled';
 import { Icon } from '@iconify/react';
 import PageToolbar from '../components/PageToolbar';
 import { useIpc } from '../state/ipc';
-import { store } from '../utils/store';
-import { Typography } from '@mui/material';
+import { store, Track } from '../utils/store';
 import { QUERY_KEYS } from '../constants/queryKeys';
 import { useQuery } from '@tanstack/react-query';
-import { FixedSizeList } from 'react-window';
+import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { motion } from 'motion/react';
 
-const columns = [
+interface Column {
+  label: string;
+  key: string;
+  width: number;
+}
+
+const columns: Column[] = [
   { label: 'Title', key: 'Title', width: 180 },
   { label: 'Artist', key: 'ArtistName', width: 140 },
   { label: 'Album', key: 'AlbumTitle', width: 140 },
@@ -29,15 +36,19 @@ const columns = [
   { label: 'Duration', key: 'Duration', width: 60 },
 ];
 
-const getVisibleColumns = isPhone => (isPhone ? columns.slice(0, 2) : columns);
+const getVisibleColumns = (isPhone: boolean): Column[] => (isPhone ? columns.slice(0, 2) : columns);
 
-const getFlex = (col, isPhone) => {
+const getFlex = (col: Column, isPhone: boolean): number => {
   if (isPhone) return 1;
   if (col.label === 'Title') return 2;
   return 1;
 };
 
-const HeaderRow = ({ isPhone }) => {
+interface HeaderRowProps {
+  isPhone: boolean;
+}
+
+const HeaderRow: React.FC<HeaderRowProps> = ({ isPhone }) => {
   const visibleColumns = getVisibleColumns(isPhone);
   return (
     <div
@@ -66,19 +77,19 @@ const HeaderRow = ({ isPhone }) => {
   );
 };
 
-const AllSongs = () => {
-  const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
+const AllSongs: React.FC = () => {
+  const isPhone = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
   const { invokeEventToMainProcess } = useIpc();
   const { dispatch, state } = useContext(store);
-  const lastScrollTop = useRef(0);
+  const lastScrollTop = useRef<number>(0);
 
   const {
-    data: songs = [],
+    data: songs = [] as Track[],
     isLoading,
     error,
   } = useQuery({
     queryKey: [QUERY_KEYS.ALL_SONGS],
-    queryFn: () => invokeEventToMainProcess('get-all-songs'),
+    queryFn: () => invokeEventToMainProcess('get-all-songs', undefined) as Promise<Track[]>,
   });
 
   // Show player bar when component mounts or unmounts
@@ -89,7 +100,7 @@ const AllSongs = () => {
     };
   }, [dispatch]);
 
-  const handleScroll = ({ scrollOffset }) => {
+  const handleScroll = ({ scrollOffset }: { scrollOffset: number }): void => {
     // Only hide/show if scrolled more than 250px
     if (scrollOffset > 250) {
       // Scrolling down
@@ -109,7 +120,7 @@ const AllSongs = () => {
   };
 
   const handleSongClick = React.useCallback(
-    clickedIndex => {
+    (clickedIndex: number): void => {
       dispatch({
         type: 'SET_QUEUE',
         payload: { queue: songs, index: clickedIndex },
@@ -121,7 +132,7 @@ const AllSongs = () => {
   );
 
   const Row = React.useCallback(
-    ({ index, style }) => {
+    ({ index, style }: ListChildComponentProps) => {
       const song = songs[index];
       const visibleColumns = getVisibleColumns(isPhone);
 
@@ -139,7 +150,7 @@ const AllSongs = () => {
               background: 'rgba(255,255,255,0.08)',
             },
           }}
-          key={song.Id || index}
+          key={song.Id != null ? String(song.Id) : index}
           onClick={() => handleSongClick(index)}
         >
           {visibleColumns.map(col => (
@@ -155,7 +166,7 @@ const AllSongs = () => {
               }}
             >
               <Typography variant="body2" noWrap>
-                {song[col.key] || ''}
+                {(song[col.key] as string) || ''}
               </Typography>
             </Box>
           ))}
@@ -165,11 +176,29 @@ const AllSongs = () => {
     [songs, dispatch, isPhone, state.track?.Id, handleSongClick]
   );
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading)
+    return (
+      <div>
+        <LinearProgress
+          color="primary"
+          sx={{
+            borderRadius: 1,
+          }}
+        />
+      </div>
+    );
   if (error) return <div>Error fetching songs</div>;
 
   return (
-    <Grid item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Grid
+      component={motion.div}
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -20, opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      item
+      sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+    >
       <PageToolbar
         title="All Songs"
         action={
@@ -185,7 +214,7 @@ const AllSongs = () => {
         <HeaderRow isPhone={isPhone} />
         <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           <AutoSizer>
-            {({ height, width }) => (
+            {({ height, width }: { height: number; width: number }) => (
               <FixedSizeList
                 height={height}
                 overscanCount={100}

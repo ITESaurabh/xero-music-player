@@ -5,8 +5,8 @@ import { debounce } from '../utils/misc';
 const { ipcRenderer } = window.require('electron');
 
 interface IpcContextValue {
-  sendEventToMainProcess: (event: string, payload: unknown) => void;
-  invokeEventToMainProcess: (event: string, payload: unknown) => Promise<unknown>;
+  sendEventToMainProcess: (event: string, payload?: unknown) => void;
+  invokeEventToMainProcess: (event: string, payload?: unknown) => Promise<unknown>;
 }
 
 const IpcContext = createContext<IpcContextValue | undefined>(undefined);

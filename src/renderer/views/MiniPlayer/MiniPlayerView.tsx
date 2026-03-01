@@ -14,19 +14,66 @@ import speaker132Regular from '@iconify/icons-fluent/speaker-1-32-regular';
 import speaker232Regular from '@iconify/icons-fluent/speaker-2-32-regular';
 import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
 import { APP_NAME, DEFAULT_AA } from '../../../config/constants';
-import Image from 'mui-image';
+import MuiImage from 'mui-image';
 import { ArrayBuff2ImgBuff } from '../../../main/utils/misc';
 import Marquee from 'react-fast-marquee';
 import { formatTime } from '../../utils/misc';
 import { getVolumeLevel, setVolumeLevel } from '../../utils/LocStoreUtil';
-var jsmediatags = require('jsmediatags');
 
-const parseMusic = async musicPath => {
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const jsmediatags = require('jsmediatags') as {
+  read: (
+    _path: string,
+    _callbacks: {
+      onSuccess: (_tag: { type: string; tags: JsMediaTagsResult }) => void;
+      onError: (_error: unknown) => void;
+    }
+  ) => void;
+};
+
+interface JsMediaTagsResult {
+  title?: string;
+  artist?: string;
+  album?: string;
+  track?: string;
+  genre?: string;
+  year?: string;
+  picture?: {
+    data: number[];
+    format?: string;
+    type?: string;
+  };
+}
+
+interface ParsedMusic {
+  fileInfo: {
+    tagType: string;
+    path: string;
+  };
+  tags: {
+    title: string;
+    artist: string;
+    album: string;
+    track: string;
+    genre: string;
+    year: string;
+    albumArt: string;
+  };
+}
+
+interface SongMeta {
+  title: string;
+  artist: string;
+  album: string;
+  albumArt: string;
+}
+
+const parseMusic = async (musicPath: string): Promise<ParsedMusic> => {
   return await new Promise((resolve, reject) => {
-    let music = {
+    const music: ParsedMusic = {
       fileInfo: {
-        tagType: '', // ID3 = mp3 || APE = wav || OGG = ogg || FLAC = flac || M4A = m4a
-        path: musicPath, // Explicit path
+        tagType: '',
+        path: musicPath,
       },
       tags: {
         title: '',
@@ -40,55 +87,60 @@ const parseMusic = async musicPath => {
     };
 
     jsmediatags.read(musicPath, {
-      onSuccess: function (tag) {
-        let { type, tags } = tag;
-        // console.log('MUSC:', music, tags);
+      onSuccess: function (tag: { type: string; tags: JsMediaTagsResult }) {
+        const { type, tags } = tag;
         music.fileInfo.tagType = type;
-        music.tags.title = tags.title;
-        music.tags.artist = tags.artist;
-        music.tags.album = tags.album;
-        music.tags.track = tags.track;
-        music.tags.genre = tags.genre;
-        music.tags.year = tags.year;
+        music.tags.title = tags.title ?? '';
+        music.tags.artist = tags.artist ?? '';
+        music.tags.album = tags.album ?? '';
+        music.tags.track = tags.track ?? '';
+        music.tags.genre = tags.genre ?? '';
+        music.tags.year = tags.year ?? '';
         if (tag && tags.picture && tags.picture.data) {
           tags.picture.type = tags.picture.type ? tags.picture.type.replace(/image\//g, '') : 'jpg';
-          const base64Img = ArrayBuff2ImgBuff(tags.picture);
+          const base64Img = ArrayBuff2ImgBuff({
+            data: tags.picture.data,
+            format: tags.picture.format ?? tags.picture.type ?? 'jpg',
+            type: tags.picture.type,
+          });
           music.tags.albumArt = String(base64Img);
         }
         resolve(music);
       },
-      onError: function (error) {
+      onError: function (error: unknown) {
         reject(error);
       },
     });
   });
 };
+
 const maxCharacters = 20;
-const initialMeta = {
+const initialMeta: SongMeta = {
   title: 'Unknown Title',
   artist: 'Unknown Artist',
   album: 'Unknown Album',
   albumArt: DEFAULT_AA,
 };
-export default function MiniPlayerView() {
+
+export default function MiniPlayerView(): React.ReactElement {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  let defaultVol = getVolumeLevel();
-  const [volume, setVolume] = useState(defaultVol);
+  const defaultVol = getVolumeLevel();
+  const [volume, setVolume] = useState<number>(defaultVol);
   const { state, dispatch } = useContext(store);
   const { path, isPlaying } = state;
   const { sendEventToMainProcess } = useIpc();
-  const [songMeta, setSongMeta] = useState(initialMeta);
-  const [position, setPosition] = useState(0);
-  const [muteVolume, setMuteVolume] = useState(false);
-  const [isSeeking, setIsSeeking] = useState(false);
+  const [songMeta, setSongMeta] = useState<SongMeta>(initialMeta);
+  const [position, setPosition] = useState<number>(0);
+  const [muteVolume, setMuteVolume] = useState<boolean>(false);
+  const [isSeeking, setIsSeeking] = useState<boolean>(false);
 
-  const audioRef = useRef();
-  const progressBarRef = useRef();
-  const fadeIntervalRef = useRef(null);
-  const volumeRef = useRef(defaultVol / 100);
-  const muteVolumeRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressBarRef = useRef<unknown>(null);
+  const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const volumeRef = useRef<number>(defaultVol / 100);
+  const muteVolumeRef = useRef<boolean>(false);
 
   useEffect(() => {
     volumeRef.current = volume / 100;
@@ -115,14 +167,14 @@ export default function MiniPlayerView() {
     if (isPlaying) {
       const targetVol = muteVolumeRef.current ? 0 : volumeRef.current;
       audio.volume = 0;
-      audio.play().catch(() => {});
+      audio.play().catch(() => undefined);
       let step = 0;
       fadeIntervalRef.current = setInterval(() => {
         step++;
         audio.volume = Math.min(targetVol, targetVol * (step / FADE_STEPS));
         if (step >= FADE_STEPS) {
           audio.volume = targetVol;
-          clearInterval(fadeIntervalRef.current);
+          if (fadeIntervalRef.current !== null) clearInterval(fadeIntervalRef.current);
           fadeIntervalRef.current = null;
         }
       }, FADE_INTERVAL_MS);
@@ -133,7 +185,7 @@ export default function MiniPlayerView() {
         step++;
         audio.volume = Math.max(0, startVol * (1 - step / FADE_STEPS));
         if (step >= FADE_STEPS) {
-          clearInterval(fadeIntervalRef.current);
+          if (fadeIntervalRef.current !== null) clearInterval(fadeIntervalRef.current);
           fadeIntervalRef.current = null;
           audio.pause();
           audio.volume = muteVolumeRef.current ? 0 : volumeRef.current;
@@ -145,7 +197,7 @@ export default function MiniPlayerView() {
   useEffect(() => {
     const audioElement = audioRef.current;
 
-    const handleTimeUpdate = () => {
+    const handleTimeUpdate = (): void => {
       if (!isSeeking) {
         setPosition(audioElement.currentTime);
       }
@@ -162,16 +214,20 @@ export default function MiniPlayerView() {
     };
   }, [isSeeking, audioRef]);
 
-  const handleSliderChange = (event, newValue) => {
-    setPosition(newValue);
-  };
-  const handleVolumeChange = (event, newValue) => {
-    setVolume(newValue);
+  const handleSliderChange = (_event: Event, newValue: number | number[]): void => {
+    setPosition(newValue as number);
   };
 
-  const handleSliderChangeCommitted = (event, newValue) => {
+  const handleVolumeChange = (_event: Event, newValue: number | number[]): void => {
+    setVolume(newValue as number);
+  };
+
+  const handleSliderChangeCommitted = (
+    _event: React.SyntheticEvent | Event,
+    newValue: number | number[]
+  ): void => {
     const audioElement = audioRef.current;
-    audioElement.currentTime = newValue;
+    audioElement.currentTime = newValue as number;
     setIsSeeking(false);
   };
 
@@ -199,7 +255,7 @@ export default function MiniPlayerView() {
             setSongMeta(initialMeta);
           }
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           console.log(err);
           setSongMeta(initialMeta);
         });
@@ -209,23 +265,22 @@ export default function MiniPlayerView() {
 
   return (
     <Container
-      justifyContent="space-between"
-      alignItems="center"
       disableGutters
       sx={{
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         height: '100vh',
         width: '100vw',
         overflow: 'hidden',
       }}
       className="play-area"
     >
-      <Grid item className="canva">
+      <Grid className="canva">
         <Box
           sx={{
             display: 'flex',
-            // backgroundColor: 'red',
             padding: theme.spacing(1, 2),
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -244,7 +299,7 @@ export default function MiniPlayerView() {
           >
             <IconButton
               aria-label="minimize"
-              onClick={() => sendEventToMainProcess('minimize')}
+              onClick={() => sendEventToMainProcess('minimize', null)}
               sx={{
                 backgroundColor: isDark ? 'black' : '#d9d9d9',
               }}
@@ -252,7 +307,7 @@ export default function MiniPlayerView() {
               <Icon icon={subtract12Filled} fontSize={12} />
             </IconButton>
             <IconButton
-              onClick={() => sendEventToMainProcess('closeWindow')}
+              onClick={() => sendEventToMainProcess('closeWindow', null)}
               sx={{
                 transition: 'background-color 0.2s ease-in-out',
                 ':hover': {
@@ -269,16 +324,13 @@ export default function MiniPlayerView() {
         </Box>
         <Box display={'flex'} alignItems={'center'} paddingX={2} marginBottom={1}>
           <Box sx={{ width: 'inherit' }}>
-            <Image
-              id={songMeta.album}
+            <MuiImage
               src={songMeta.albumArt}
               className="no-select no-drag"
               height={150}
               width={150}
               showLoading
-              sx={{
-                borderRadius: '0.4375rem',
-              }}
+              style={{ borderRadius: '0.4375rem' }}
               fit="contain"
             />
           </Box>
@@ -292,7 +344,7 @@ export default function MiniPlayerView() {
             }}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', maxWidth: '12.8rem' }}>
-              {songMeta.title?.length <= maxCharacters ? (
+              {(songMeta.title?.length ?? 0) <= maxCharacters ? (
                 <Typography variant="h5" noWrap>
                   {songMeta.title}
                 </Typography>
@@ -303,7 +355,7 @@ export default function MiniPlayerView() {
                   </Typography>
                 </Marquee>
               )}
-              {songMeta.artist?.length <= 25 ? (
+              {(songMeta.artist?.length ?? 0) <= 25 ? (
                 <Typography variant="body2" color="text.secondary" fontWeight={400} noWrap>
                   {songMeta.artist}
                 </Typography>
@@ -314,7 +366,7 @@ export default function MiniPlayerView() {
                   </Typography>
                 </Marquee>
               )}
-              {songMeta.album?.length <= maxCharacters ? (
+              {(songMeta.album?.length ?? 0) <= maxCharacters ? (
                 <Typography variant="h6" lineHeight={'inherit'} fontWeight={400} noWrap>
                   {songMeta.album}
                 </Typography>
@@ -383,7 +435,7 @@ export default function MiniPlayerView() {
                 max={100}
                 onChange={handleVolumeChange}
                 onChangeCommitted={(event, newValue) => {
-                  setVolumeLevel(newValue);
+                  setVolumeLevel(newValue as number);
                 }}
                 sx={{
                   color:
@@ -392,10 +444,8 @@ export default function MiniPlayerView() {
                         ? theme.palette.error.main
                         : '#fff'
                       : volume >= 60
-                      ? theme.palette.error.main
-                      : '#6b6b6b',
-
-                  // '#6b6b6b',
+                        ? theme.palette.error.main
+                        : '#6b6b6b',
                   '& .MuiSlider-track': {
                     border: 'none',
                   },
@@ -433,13 +483,13 @@ export default function MiniPlayerView() {
         </Box>
       </Grid>
 
-      <Grid item height={'3rem'} alignItems={'center'} display={'flex'} marginX={2}>
+      <Grid sx={{ height: '3rem', alignItems: 'center', display: 'flex', mx: 2 }}>
         <Typography className="no-select no-drag" fontSize={'0.75rem'} mr={2}>
           {formatTime(position)}
         </Typography>
         <Slider
           size="small"
-          ref={progressBarRef}
+          ref={progressBarRef as React.Ref<HTMLSpanElement>}
           value={position}
           min={0}
           max={audioRef.current?.duration || 0}

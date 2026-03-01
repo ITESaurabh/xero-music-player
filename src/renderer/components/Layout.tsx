@@ -6,7 +6,7 @@ import Box from '@mui/material/Box';
 import { Paper, Stack, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import { Outlet } from 'react-router';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 
 import PlayBar from './PlayBar';
 import MainDrawer from './MainDrawer';
@@ -100,22 +100,24 @@ function Layout() {
             }}
             container
           >
-            <Grid
-              xs={12}
-              sx={{
-                height: '100%',
-                maxHeight: 'calc(100vh - 32px)',
-                borderTopLeftRadius: '0.5rem',
-                flex: 1,
-                width: '100%',
-                maxWidth: '100%',
-                minWidth: 0,
-                p: 0,
-                m: 0,
-              }}
-            >
-              <Outlet />
-            </Grid>
+            <AnimatePresence>
+              <Grid
+                xs={12}
+                sx={{
+                  height: '100%',
+                  maxHeight: 'calc(100vh - 32px)',
+                  borderTopLeftRadius: '0.5rem',
+                  flex: 1,
+                  width: '100%',
+                  maxWidth: '100%',
+                  minWidth: 0,
+                  p: 0,
+                  m: 0,
+                }}
+              >
+                <Outlet />
+              </Grid>
+            </AnimatePresence>
           </Grid>
           <motion.div
             animate={{
