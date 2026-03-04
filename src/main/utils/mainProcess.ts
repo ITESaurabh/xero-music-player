@@ -24,6 +24,11 @@ function sendMessageToRendererProcess(
 export default function mainIpcs(mainWin) {
   // mainWin.webContents.send('asynchronous-message', {'SAVED': 'File Saved'});
   // mainWin.webContents.openDevTools();
+
+  // Tracks any running scan worker so we never spawn duplicates
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let activeScanWorker: any = null;
+
   mainWin.on('minimize', () => {
     mainWin.setOpacity(1);
     setTimeout(() => {
@@ -158,7 +163,34 @@ export default function mainIpcs(mainWin) {
   //    });
   // }
 
-  ipcMain.handle('scan-media', async e => {
+  ipcMain.handle('get-scan-status', () => {
+    return { isScanning: activeScanWorker !== null };
+  });
+
+  ipcMain.handle('get-library-stats', () => {
+    try {
+      const songs = (db.prepare('SELECT COUNT(*) AS count FROM Track').get() as { count: number }).count;
+      const albums = (db.prepare('SELECT COUNT(*) AS count FROM Album').get() as { count: number }).count;
+      const artists = (db.prepare('SELECT COUNT(*) AS count FROM Artist').get() as { count: number }).count;
+      const albumArtists = (db.prepare('SELECT COUNT(DISTINCT ArtistId) AS count FROM Album').get() as { count: number }).count;
+      const genres = (db.prepare('SELECT COUNT(*) AS count FROM Genre').get() as { count: number }).count;
+      const years = (db.prepare("SELECT COUNT(DISTINCT Year) AS count FROM Track WHERE Year IS NOT NULL AND Year != ''").get() as { count: number }).count;
+      const folders = (db.prepare("SELECT COUNT(DISTINCT FolderPath) AS count FROM Track WHERE FolderPath IS NOT NULL").get() as { count: number }).count;
+      // Favourites and Playlists tables don't exist yet — return 0
+      const favourites = 0;
+      const playlists = 0;
+      return { songs, albums, artists, albumArtists, genres, years, folders, favourites, playlists };
+    } catch {
+      return { songs: 0, albums: 0, artists: 0, albumArtists: 0, genres: 0, years: 0, folders: 0, favourites: 0, playlists: 0 };
+    }
+  });
+
+  ipcMain.handle('scan-media', async () => {
+    // Prevent duplicate workers
+    if (activeScanWorker) {
+      return { success: false, error: 'Scan already in progress' };
+    }
+
     // Get all music folders
     const folders = db.prepare('SELECT * FROM MusicFolder').all();
     if (!folders.length) return { success: false, error: 'No folders to scan' };
@@ -171,26 +203,82 @@ export default function mainIpcs(mainWin) {
       ARTIST_ART_DIR,
     };
 
-    // Spawn a worker process for scanning
-    const worker = fork(path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js'));
-    worker.send({ folders, config });
+    // Spawn a worker process for scanning (basic/optimistic mode)
+    activeScanWorker = fork(path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js'));
+    activeScanWorker.send({ folders, config, mode: 'basic' });
+    sendMessageToRendererProcess(mainWin, 'scan-start', null);
 
-    return new Promise((resolve, reject) => {
-      worker.on('message', rawMsg => {
-        const msg = rawMsg as { success: boolean; scanned: number; error: string };
-        if (msg.success) {
-          console.log(`Scanned ${msg.scanned} files successfully.`);
+    let resolvePromise: (v: unknown) => void;
+    let rejectPromise: (e: unknown) => void;
+    const scanPromise = new Promise((res, rej) => { resolvePromise = res; rejectPromise = rej; });
 
-          resolve({ success: true, scanned: msg.scanned });
-        } else {
-          reject(msg.error);
-        }
-      });
-      worker.on('error', err => reject(err));
-      worker.on('exit', code => {
-        if (code !== 0) reject('Worker exited with code ' + code);
-      });
+    activeScanWorker.on('message', rawMsg => {
+      const msg = rawMsg as { type?: string; success?: boolean; scanned?: number; total?: number; processed?: number; error?: string };
+      if (msg.type === 'progress') {
+        sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
+      } else if (msg.success) {
+        resolvePromise({ success: true, scanned: msg.scanned });
+      } else {
+        rejectPromise(msg.error);
+      }
     });
+    activeScanWorker.on('error', err => {
+      rejectPromise(err);
+    });
+    activeScanWorker.on('exit', (code: number) => {
+      console.log(`[scan-media] Worker exited with code ${code}`);
+      activeScanWorker = null;
+      sendMessageToRendererProcess(mainWin, 'scan-end', null);
+      if (code !== 0) rejectPromise('Worker exited with code ' + code);
+    });
+
+    return scanPromise;
+  });
+
+  ipcMain.handle('full-rescan', async () => {
+    if (activeScanWorker) {
+      return { success: false, error: 'Scan already in progress' };
+    }
+
+    const folders = db.prepare('SELECT * FROM MusicFolder').all();
+    if (!folders.length) return { success: false, error: 'No folders to scan' };
+
+    const config = {
+      APP_CONF_FOLDER,
+      MUSIC_DIR,
+      ALBUM_ART_DIR,
+      ARTIST_ART_DIR,
+    };
+
+    activeScanWorker = fork(path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js'));
+    activeScanWorker.send({ folders, config, mode: 'full' });
+    sendMessageToRendererProcess(mainWin, 'scan-start', null);
+
+    let resolvePromise: (v: unknown) => void;
+    let rejectPromise: (e: unknown) => void;
+    const scanPromise = new Promise((res, rej) => { resolvePromise = res; rejectPromise = rej; });
+
+    activeScanWorker.on('message', rawMsg => {
+      const msg = rawMsg as { type?: string; success?: boolean; scanned?: number; total?: number; processed?: number; error?: string };
+      if (msg.type === 'progress') {
+        sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
+      } else if (msg.success) {
+        resolvePromise({ success: true, scanned: msg.scanned });
+      } else {
+        rejectPromise(msg.error);
+      }
+    });
+    activeScanWorker.on('error', err => {
+      rejectPromise(err);
+    });
+    activeScanWorker.on('exit', (code: number) => {
+      console.log(`[full-rescan] Worker exited with code ${code}`);
+      activeScanWorker = null;
+      sendMessageToRendererProcess(mainWin, 'scan-end', null);
+      if (code !== 0) rejectPromise('Worker exited with code ' + code);
+    });
+
+    return scanPromise;
   });
 
   mainWin.webContents.on('before-input-event', (event, input) => {
@@ -337,6 +425,64 @@ export default function mainIpcs(mainWin) {
     `
       )
       .all();
+  });
+
+  ipcMain.handle('get-all-albums', () => {
+    const rows = db
+      .prepare(
+        `
+      SELECT
+        Album.Id,
+        Album.Title,
+        Album.ReleaseYear,
+        Artist.Name AS ArtistName,
+        COUNT(Track.Id) AS SongCount
+      FROM Album
+      LEFT JOIN Artist ON Album.ArtistId = Artist.Id
+      LEFT JOIN Track ON Album.Id = Track.AlbumId
+      GROUP BY Album.Id
+      ORDER BY Album.Title COLLATE NOCASE
+    `
+      )
+      .all();
+    return rows.map(row => {
+      const coverPath = path.join(ALBUM_ART_DIR, `${row.Id}.jpg`);
+      return {
+        ...row,
+        CoverUri: fs.existsSync(coverPath) ? coverPath : null,
+      };
+    });
+  });
+
+  ipcMain.handle('get-album-songs', (e, { albumId }) => {
+    const rows = db
+      .prepare(
+        `
+      SELECT
+        Track.Id,
+        Track.Title,
+        Track.Uri,
+        Track.Extension,
+        Track.Year,
+        Track.TrackNumber,
+        Track.AlbumArt,
+        Track.Duration,
+        Artist.Name AS ArtistName,
+        Album.Title AS AlbumTitle,
+        Album.Id AS AlbumId,
+        Genre.Name AS GenreName
+      FROM Track
+      LEFT JOIN Artist ON Track.ArtistId = Artist.Id
+      LEFT JOIN Album ON Track.AlbumId = Album.Id
+      LEFT JOIN Genre ON Track.GenreId = Genre.Id
+      WHERE Track.AlbumId = ?
+      ORDER BY CAST(Track.TrackNumber AS INTEGER), Track.Title COLLATE NOCASE
+    `
+      )
+      .all(albumId);
+    const coverPath = path.join(ALBUM_ART_DIR, `${albumId}.jpg`);
+    const coverUri = fs.existsSync(coverPath) ? coverPath : null;
+    return rows.map(row => ({ ...row, AlbumCoverUri: coverUri }));
   });
 
   // Search functionality
@@ -579,6 +725,9 @@ export default function mainIpcs(mainWin) {
 
   // ── Auto-scan library folders on app load ─────────────────────────────────
   mainWin.webContents.once('did-finish-load', () => {
+    // Don't spawn if another scan is already running
+    if (activeScanWorker) return;
+
     const folders = db.prepare('SELECT * FROM MusicFolder').all();
     if (!folders.length) return;
 
@@ -589,18 +738,31 @@ export default function mainIpcs(mainWin) {
       ARTIST_ART_DIR,
     };
 
-    const worker = fork(
+    activeScanWorker = fork(
       path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js')
     );
-    worker.send({ folders, config });
+    // Use basic/optimistic scan on startup — only process new files, skip known ones
+    activeScanWorker.send({ folders, config, mode: 'basic' });
+    sendMessageToRendererProcess(mainWin, 'scan-start', null);
 
-    worker.on('message', rawMsg => {
-      const msg = rawMsg as { success: boolean; scanned: number; error: string };
-      if (msg.success) {
-        console.log(`[Auto-scan] Found ${msg.scanned} new/updated file(s).`);
+    activeScanWorker.on('message', rawMsg => {
+      const msg = rawMsg as { type?: string; success?: boolean; scanned?: number; total?: number; processed?: number; error?: string };
+      if (msg.type === 'progress') {
+        sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
+      } else if (msg.success) {
+        console.log(`[Auto-scan] Found ${msg.scanned} new file(s).`);
         sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });
       }
     });
-    worker.on('error', err => console.error('[Auto-scan] Worker error:', err));
+    activeScanWorker.on('exit', (code: number) => {
+      console.log(`[Auto-scan] Worker exited with code ${code}`);
+      activeScanWorker = null;
+      sendMessageToRendererProcess(mainWin, 'scan-end', null);
+    });
+    activeScanWorker.on('error', err => {
+      console.error('[Auto-scan] Worker error:', err);
+      activeScanWorker = null;
+      sendMessageToRendererProcess(mainWin, 'scan-end', null);
+    });
   });
 }

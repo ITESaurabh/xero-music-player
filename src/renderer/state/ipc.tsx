@@ -1,5 +1,5 @@
 import React, { useEffect, useContext, createContext, ReactNode } from 'react';
-import { store } from '../utils/store';
+import { store, LibraryStats } from '../utils/store';
 import { debounce } from '../utils/misc';
 
 const { ipcRenderer } = window.require('electron');
@@ -24,6 +24,18 @@ interface IpcProviderProps {
 export const IpcProvider = ({ children }: IpcProviderProps) => {
   const { dispatch } = useContext(store);
 
+  // Sync scan state on mount — the auto-scan may have started before React mounted
+  useEffect(() => {
+    ipcRenderer.invoke('get-scan-status').then((res: unknown) => {
+      const status = res as { isScanning: boolean };
+      dispatch({ type: 'SET_SCANNING', payload: status.isScanning });
+    });
+    // Fetch initial library stats
+    ipcRenderer.invoke('get-library-stats').then((res: unknown) => {
+      dispatch({ type: 'SET_LIBRARY_STATS', payload: res as LibraryStats });
+    });
+  }, []);
+
   useEffect(() => {
     const handleIpcMessage = (_event: Electron.IpcRendererEvent, arg: string) => {
       dispatch({ type: 'SET_PATH', payload: arg });
@@ -46,6 +58,31 @@ export const IpcProvider = ({ children }: IpcProviderProps) => {
       ipcRenderer.removeAllListeners('expand-state');
     };
   });
+
+  useEffect(() => {
+    const handleScanStart = () => {
+      dispatch({ type: 'SET_SCANNING', payload: true });
+    };
+    const handleScanProgress = (_event: Electron.IpcRendererEvent, arg: { scanned: number; total: number; processed: number }) => {
+      dispatch({ type: 'SET_SCAN_PROGRESS', payload: arg });
+    };
+    const handleScanEnd = () => {
+      dispatch({ type: 'SET_SCANNING', payload: false });
+      // Refresh stats after scan completes
+      ipcRenderer.invoke('get-library-stats').then((res: unknown) => {
+        dispatch({ type: 'SET_LIBRARY_STATS', payload: res as LibraryStats });
+      });
+    };
+
+    ipcRenderer.on('scan-start', handleScanStart);
+    ipcRenderer.on('scan-progress', handleScanProgress);
+    ipcRenderer.on('scan-end', handleScanEnd);
+    return () => {
+      ipcRenderer.removeListener('scan-start', handleScanStart);
+      ipcRenderer.removeListener('scan-progress', handleScanProgress);
+      ipcRenderer.removeListener('scan-end', handleScanEnd);
+    };
+  }, []);
 
   const sendEventToMainProcess = (event: string, payload: unknown): void => {
     ipcRenderer.send(event, payload);

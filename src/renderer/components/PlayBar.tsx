@@ -19,7 +19,6 @@ import RepeatOneOnRoundedIcon from '@mui/icons-material/RepeatOneOnRounded';
 import RepeatOnRoundedIcon from '@mui/icons-material/RepeatOnRounded';
 import { store, RepeatMode } from '../utils/store';
 import { getVolumeLevel, setVolumeLevel } from '../utils/LocStoreUtil';
-import jsmediatags from 'jsmediatags';
 import speaker132Regular from '@iconify/icons-fluent/speaker-1-32-regular';
 import speaker232Regular from '@iconify/icons-fluent/speaker-2-32-regular';
 import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
@@ -53,12 +52,7 @@ const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
-const initialMeta = {
-  title: 'Unknown Title',
-  artist: 'Unknown Artist',
-  album: 'Unknown Album',
-  albumArt: DEFAULT_AA,
-};
+
 
 export default function PlayBar() {
   const theme = useTheme();
@@ -75,7 +69,6 @@ export default function PlayBar() {
   const [paused, setPaused] = useState(true);
   const [muteVolume, setMuteVolume] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
-  const [songMeta, setSongMeta] = useState(initialMeta);
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   const [volume, setVolume] = useState(defaultVol);
   const [lastVolume, setLastVolume] = useState(defaultVol > 0 ? defaultVol : 30);
@@ -98,27 +91,6 @@ export default function PlayBar() {
       const fileUrl = `file://${songPath.replace(/\\/g, '/')}`;
       audioRef.current.src = fileUrl;
       audioRef.current.volume = defaultVol / 100;
-      // Fetch metadata
-      jsmediatags.read(songPath, {
-        onSuccess: function (tag) {
-          const { tags } = tag;
-          setSongMeta({
-            title: tags.title || initialMeta.title,
-            artist: tags.artist || initialMeta.artist,
-            album: tags.album || initialMeta.album,
-            albumArt:
-              tags.picture && tags.picture.data
-                ? (() => {
-                    const base64String = Buffer.from(tags.picture.data).toString('base64');
-                    return `data:image/${tags.picture.format || 'image/jpeg'};base64,${base64String}`;
-                  })()
-                : DEFAULT_AA,
-          });
-        },
-        onError: function () {
-          setSongMeta(initialMeta);
-        },
-      });
       // Play only after loadedmetadata
       const handleLoadedMetadata = () => {
         audioRef.current.play().catch(() => undefined);
@@ -137,7 +109,6 @@ export default function PlayBar() {
       if (audioRef.current) {
         audioRef.current.src = '';
       }
-      setSongMeta(initialMeta);
       setPaused(true);
     }
   }, [songPath]);
@@ -254,17 +225,22 @@ export default function PlayBar() {
     }
   }, [paused, songPath]);
 
+  // Build album art src from the DB path (avoids reading the raw file into memory)
+  const albumArtSrc = state.track?.AlbumArt
+    ? `file:///${(state.track.AlbumArt as string).replace(/\\/g, '/')}`
+    : DEFAULT_AA;
+
   // --- Media Session API ---
   // Update OS metadata (Now Playing, lock screen, taskbar) when track changes
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: songMeta.title,
-      artist: songMeta.artist,
-      album: songMeta.album,
-      artwork: songMeta.albumArt ? [{ src: songMeta.albumArt }] : [],
+      title: (state.track?.Title as string) || 'Unknown Title',
+      artist: (state.track?.ArtistName as string) || 'Unknown Artist',
+      album: (state.track?.AlbumTitle as string) || 'Unknown Album',
+      artwork: albumArtSrc ? [{ src: albumArtSrc }] : [],
     });
-  }, [songMeta]);
+  }, [state.track]);
 
   // Sync OS playback state with local paused state
   useEffect(() => {
@@ -483,7 +459,7 @@ export default function PlayBar() {
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
             <CoverImage>
               <Image
-                src={songMeta.albumArt}
+                src={albumArtSrc}
                 className="no-select no-drag"
                 showLoading
                 style={{ borderRadius: '0.4375rem' }}
@@ -507,18 +483,18 @@ export default function PlayBar() {
                 fontWeight={500}
                 noWrap={!isPhone}
                 maxWidth={'360px'}
-                title={songMeta.artist}
+                title={(state.track?.ArtistName as string) || ''}
                 className="no-select no-drag"
               >
-                {songMeta.artist}
+                {(state.track?.ArtistName as string) || 'Unknown Artist'}
               </Typography>
               <Typography
                 noWrap={!isPhone}
                 maxWidth={'360px'}
                 className="no-select no-drag"
-                title={songMeta.album}
+                title={(state.track?.AlbumTitle as string) || ''}
               >
-                {songMeta.album}
+                {(state.track?.AlbumTitle as string) || 'Unknown Album'}
               </Typography>
             </Box>
           </Box>

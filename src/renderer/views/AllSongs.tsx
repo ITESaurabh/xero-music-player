@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useEffect } from 'react';
+import React, { useContext, useEffect } from 'react';
 import {
   Container,
   Button,
@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { motion } from 'motion/react';
+import { useScrollHidePlayerBar } from '../utils/useScrollHidePlayerBar';
 
 interface Column {
   label: string;
@@ -81,7 +82,7 @@ const AllSongs: React.FC = () => {
   const isPhone = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
   const { invokeEventToMainProcess } = useIpc();
   const { dispatch, state } = useContext(store);
-  const lastScrollTop = useRef<number>(0);
+  const handleScroll = useScrollHidePlayerBar();
 
   const {
     data: songs = [] as Track[],
@@ -100,24 +101,6 @@ const AllSongs: React.FC = () => {
     };
   }, [dispatch]);
 
-  const handleScroll = ({ scrollOffset }: { scrollOffset: number }): void => {
-    // Only hide/show if scrolled more than 250px
-    if (scrollOffset > 250) {
-      // Scrolling down
-      if (scrollOffset > lastScrollTop.current) {
-        dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: false });
-      }
-      // Scrolling up
-      else if (scrollOffset < lastScrollTop.current) {
-        dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
-      }
-    } else {
-      // Near top, always show
-      dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
-    }
-
-    lastScrollTop.current = scrollOffset;
-  };
 
   const handleSongClick = React.useCallback(
     (clickedIndex: number): void => {

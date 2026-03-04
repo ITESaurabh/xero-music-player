@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   Container,
   Button,
   Accordion,
   Fade,
   AccordionSummary,
+  CircularProgress,
   Typography,
   AccordionDetails,
   List,
@@ -22,6 +23,7 @@ import foldersIcon from '@iconify/icons-fluent/folder-24-regular';
 import syncIcon from '@iconify/icons-fluent/arrow-sync-24-regular';
 import addFolderIcon from '@iconify/icons-fluent/folder-add-24-regular';
 import { useIpc } from '../state/ipc';
+import { store } from '../utils/store';
 import { motion } from 'motion/react';
 
 interface MusicFolder {
@@ -33,6 +35,8 @@ const Settings: React.FC = () => {
   const [expanded, setExpanded] = React.useState<boolean>(false);
   const [folders, setFolders] = React.useState<MusicFolder[]>([]);
   const { invokeEventToMainProcess } = useIpc();
+  const { state } = useContext(store);
+  const { isScanningLibrary } = state;
 
   React.useEffect(() => {
     invokeEventToMainProcess('get-music-folders')
@@ -64,10 +68,15 @@ const Settings: React.FC = () => {
         >
           <ListItem component={Stack} direction="row" spacing={2}>
             <Button
-              startIcon={<Icon icon={syncIcon} height={'1.5rem'} />}
+              startIcon={
+                isScanningLibrary
+                  ? <CircularProgress size={16} color="inherit" />
+                  : <Icon icon={syncIcon} height={'1.5rem'} />
+              }
               variant="outlined"
               color="primary"
               fullWidth
+              disabled={isScanningLibrary}
               onClick={() => {
                 invokeEventToMainProcess('scan-media', undefined)
                   .then((data: unknown) => {
@@ -81,15 +90,32 @@ const Settings: React.FC = () => {
                   });
               }}
             >
-              Rescan Media
+              {isScanningLibrary ? 'Scanning…' : 'Rescan Media'}
             </Button>
             <Button
-              startIcon={<Icon icon={syncIcon} height={'1.5rem'} />}
+              startIcon={
+                isScanningLibrary
+                  ? <CircularProgress size={16} color="inherit" />
+                  : <Icon icon={syncIcon} height={'1.5rem'} />
+              }
               variant="outlined"
               color="warning"
               fullWidth
+              disabled={isScanningLibrary}
+              onClick={() => {
+                invokeEventToMainProcess('full-rescan', undefined)
+                  .then((data: unknown) => {
+                    console.log('Full rescan completed:', data);
+                    invokeEventToMainProcess('get-music-folders', undefined).then((d: unknown) =>
+                      setFolders(d as MusicFolder[])
+                    );
+                  })
+                  .catch((err: unknown) => {
+                    console.error('Error during full rescan:', err);
+                  });
+              }}
             >
-              Full Rescan
+              {isScanningLibrary ? 'Scanning…' : 'Full Rescan'}
             </Button>
           </ListItem>
           <ListItem disableGutters>

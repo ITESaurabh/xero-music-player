@@ -1,4 +1,4 @@
-import { memo, useContext } from 'react';
+import { memo, useContext, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -9,6 +9,7 @@ import {
   useTheme,
   Drawer,
 } from '@mui/material';
+import { useNavigate, useLocation, useNavigationType } from 'react-router';
 import { Theme } from '@mui/material/styles';
 import ButtonBase, { ButtonBaseProps } from '@mui/material/ButtonBase';
 import { sendMessageToNode } from '../../main/utils/renProcess';
@@ -51,6 +52,28 @@ const Titlebar = memo(() => {
   const isPhone = useMediaQuery(({ breakpoints }: Theme) => breakpoints.down('md'));
   const theme = useTheme();
   const { state, dispatch } = useContext(store);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navigationType = useNavigationType();
+
+  // Track how many PUSH entries are in our in-app history stack.
+  // useNavigationType returns 'POP' on the initial render, which we skip.
+  const [navDepth, setNavDepth] = useState(0);
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (navigationType === 'PUSH') {
+      setNavDepth(d => d + 1);
+    } else if (navigationType === 'POP') {
+      setNavDepth(d => Math.max(0, d - 1));
+    }
+    // REPLACE keeps the same depth
+  }, [location.key]);
+
+  const canGoBack = navDepth > 0;
 
   const toggleDrawer = () => {
     dispatch({ type: 'SET_MENU_EXPANDED', payload: !state.isMenuExpanded });
@@ -111,7 +134,12 @@ const Titlebar = memo(() => {
             sx={{ '-webkit-app-region': 'no-drag' }}
             ml={'0.5rem'}
           >
-            <Button sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }} size="small">
+            <Button
+              disabled={!canGoBack}
+              onClick={() => navigate(-1)}
+              sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }}
+              size="small"
+            >
               <Icon icon={arrowleftIcon} height="1.4em" />
             </Button>
             {isPhone && (

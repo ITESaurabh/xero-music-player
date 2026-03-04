@@ -8,6 +8,24 @@ export interface Track {
   [key: string]: unknown;
 }
 
+export interface ScanProgress {
+  scanned: number;
+  total: number;
+  processed: number;
+}
+
+export interface LibraryStats {
+  songs: number;
+  favourites: number;
+  playlists: number;
+  albums: number;
+  artists: number;
+  albumArtists: number;
+  folders: number;
+  genres: number;
+  years: number;
+}
+
 export interface AppState {
   isLightTheme: boolean;
   isMaximized: boolean;
@@ -23,6 +41,9 @@ export interface AppState {
   repeatMode: RepeatMode;
   isShuffle: boolean;
   isPlayerBarVisible: boolean;
+  isScanningLibrary: boolean;
+  scanProgress: ScanProgress | null;
+  libraryStats: LibraryStats | null;
 }
 
 export type AppAction =
@@ -40,7 +61,10 @@ export type AppAction =
   | { type: 'PREV_TRACK' }
   | { type: 'SET_REPEAT_MODE'; payload: RepeatMode }
   | { type: 'SET_PLAYER_BAR_VISIBLE'; payload: boolean }
-  | { type: 'SET_SHUFFLE'; payload: boolean };
+  | { type: 'SET_SHUFFLE'; payload: boolean }
+  | { type: 'SET_SCANNING'; payload: boolean }
+  | { type: 'SET_SCAN_PROGRESS'; payload: ScanProgress }
+  | { type: 'SET_LIBRARY_STATS'; payload: LibraryStats };
 
 export interface StoreContextValue {
   state: AppState;
@@ -66,6 +90,9 @@ const initialState: AppState = (() => {
     repeatMode: 'off',
     isShuffle: false,
     isPlayerBarVisible: true,
+    isScanningLibrary: false,
+    scanProgress: null,
+    libraryStats: null,
   };
 })();
 
@@ -148,6 +175,15 @@ function reducer(state: AppState, action: AppAction): AppState {
     }
     case 'SET_PLAYER_BAR_VISIBLE': {
       return { ...state, isPlayerBarVisible: action.payload };
+    }
+    case 'SET_SCANNING': {
+      return { ...state, isScanningLibrary: action.payload, scanProgress: action.payload ? state.scanProgress : null };
+    }
+    case 'SET_SCAN_PROGRESS': {
+      return { ...state, scanProgress: action.payload };
+    }
+    case 'SET_LIBRARY_STATS': {
+      return { ...state, libraryStats: action.payload };
     }
     case 'SET_SHUFFLE': {
       if (action.payload) {

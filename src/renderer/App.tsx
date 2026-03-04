@@ -14,7 +14,16 @@ import Titlebar from './components/Titlebar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useKeyboardShortcuts, SHORTCUTS } from './utils/useKeyboardShortcuts';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data is considered fresh for 5 minutes → no refetch on re-mount
+      staleTime: 5 * 60 * 1000,
+      // Unused query cache is released after 2 minutes
+      gcTime: 2 * 60 * 1000,
+    },
+  },
+});
 
 const App = () => {
   const { state, dispatch } = useContext(store);

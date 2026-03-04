@@ -5,6 +5,7 @@ import { Box, CircularProgress } from '@mui/material';
 
 const AllSongs = lazy(() => import('../views/AllSongs'));
 const Albums = lazy(() => import('../views/Albums'));
+const AlbumDetail = lazy(() => import('../views/AlbumDetail'));
 const Search = lazy(() => import('../views/Search'));
 const Settings = lazy(() => import('../views/Settings'));
 
@@ -57,6 +58,14 @@ const routes = [
         element: (
           <React.Suspense fallback={<BigLoader />}>
             <Albums />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: 'albums/:albumId',
+        element: (
+          <React.Suspense fallback={<BigLoader />}>
+            <AlbumDetail />
           </React.Suspense>
         ),
       },
