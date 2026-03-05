@@ -48,21 +48,46 @@ interface AlbumCardProps {
 const AlbumCard: React.FC<AlbumCardProps> = React.memo(({ album, width, onClick }) => {
   const artSize = width;
   const theme = useTheme();
+  const [mouse, setMouse] = React.useState<{ x: number; y: number } | null>(null);
+
+  const handleMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMouse({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => setMouse(null), []);
 
   return (
     <Box
       onClick={() => onClick(album)}
-      component={motion.div}
-      whileHover={{ scale: 0.97 }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       sx={{
         width,
         cursor: 'pointer',
         borderRadius: 0.5,
         overflow: 'hidden',
+        position: 'relative',
         backgroundColor: theme.palette.background.default,
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        // Fluent-style border glow on hover
+        outline: mouse ? '1px solid rgba(255,255,255,0.18)' : '1px solid transparent',
+        // boxShadow: mouse ? '0 2px 10px rgba(0,0,0,0.55)' : 'none',
+        transition: 'box-shadow 0.2s ease, outline-color 0.15s ease',
       }}
     >
+      {/* Fluent Reveal: radial light spotlight that follows the cursor */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 2,
+          background: mouse
+            ? `radial-gradient(circle 550px at ${mouse.x}px ${mouse.y}px, rgba(255,255,255,0.15) 0%, transparent 70%)`
+            : 'none',
+        }}
+      />
+
       {/* Album Art */}
       <Box
         sx={{
@@ -105,22 +130,6 @@ const AlbumCard: React.FC<AlbumCardProps> = React.memo(({ album, width, onClick 
             </Typography>
           </Box>
         )}
-        {/* Hover overlay */}
-        <Box
-          className="album-art-overlay"
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: 0,
-            transition: 'opacity 0.15s ease',
-          }}
-        >
-          <Typography sx={{ fontSize: artSize * 0.28, lineHeight: 1 }}>▶</Typography>
-        </Box>
       </Box>
 
       {/* Text */}
@@ -165,7 +174,6 @@ const Cell = React.memo(
         style={{
           ...style,
           paddingRight: GAP,
-          paddingTop: GAP,
           boxSizing: 'border-box',
         }}
       >
@@ -175,6 +183,23 @@ const Cell = React.memo(
   }
 );
 Cell.displayName = 'Cell';
+
+// Overlay scrollbar so the scrollbar doesn't steal width from the grid,
+// keeping all columns fully visible without clipping the right edge.
+const ScrollContainer = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDivElement>>(
+  ({ style, ...rest }, ref) => (
+    <div
+      {...rest}
+      ref={ref}
+      style={{
+        ...style,
+        overflowY: 'overlay' as React.CSSProperties['overflowY'],
+        overflowX: 'hidden',
+      }}
+    />
+  )
+);
+ScrollContainer.displayName = 'ScrollContainer';
 
 const Albums: React.FC = () => {
   const { invokeEventToMainProcess } = useIpc();
@@ -267,7 +292,7 @@ const Albums: React.FC = () => {
                 overscanRowCount={4}
                 onScroll={handleGridScroll}
                 itemData={itemData}
-                style={{ overflowX: 'hidden' }}
+                outerElementType={ScrollContainer}
               >
                 {Cell}
               </FixedSizeGrid>

@@ -3,13 +3,14 @@ import {
   Container,
   Button,
   useMediaQuery,
-  ListItemButton,
   Box,
   Grid,
   LinearProgress,
   Theme,
   Typography,
+  ListItemButton,
 } from '@mui/material';
+import { useNavigate } from 'react-router';
 import filterIcon from '@iconify/icons-fluent/filter-24-filled';
 import { Icon } from '@iconify/react';
 import PageToolbar from '../components/PageToolbar';
@@ -26,23 +27,52 @@ interface Column {
   label: string;
   key: string;
   width: number;
+  align: 'left' | 'center' | 'right';
+  flex?: number;
+  getNavPath?: (_song: Track) => string | null;
 }
 
 const columns: Column[] = [
-  { label: 'Title', key: 'Title', width: 180 },
-  { label: 'Artist', key: 'ArtistName', width: 140 },
-  { label: 'Album', key: 'AlbumTitle', width: 140 },
-  { label: 'Year', key: 'Year', width: 80 },
-  { label: 'Genre', key: 'GenreName', width: 100 },
-  { label: 'Duration', key: 'Duration', width: 60 },
+  { label: 'Title', key: 'Title', width: 248, align: 'left', flex: 3 },
+  { label: 'Artist', key: 'ArtistName', width: 200, align: 'left', flex: 2 },
+  {
+    label: 'Album',
+    key: 'AlbumTitle',
+    width: 200,
+    align: 'left',
+    flex: 2,
+    getNavPath: song => (song.AlbumId != null ? `/main_window/albums/${song.AlbumId}` : null),
+  },
+  { label: 'Year', key: 'Year', width: 100, align: 'center', flex: 1 },
+  { label: 'Genre', key: 'GenreName', width: 130, align: 'left', flex: 2 },
+  { label: 'Duration', key: 'Duration', width: 80, align: 'right', flex: 1 },
 ];
 
 const getVisibleColumns = (isPhone: boolean): Column[] => (isPhone ? columns.slice(0, 2) : columns);
 
+// Overlay scrollbar so it floats over content, keeping header and row widths in sync.
+const ScrollContainer = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDivElement>>(
+  ({ style, ...rest }, ref) => (
+    <div
+      {...rest}
+      ref={ref}
+      style={{ ...style, overflowY: 'overlay' as React.CSSProperties['overflowY'] }}
+    />
+  )
+);
+ScrollContainer.displayName = 'ScrollContainer';
+
+const formatDuration = (seconds: unknown): string => {
+  const secs = typeof seconds === 'number' && seconds > 0 ? seconds : null;
+  if (secs == null) return '';
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 const getFlex = (col: Column, isPhone: boolean): number => {
   if (isPhone) return 1;
-  if (col.label === 'Title') return 2;
-  return 1;
+  return col.flex ?? 1;
 };
 
 interface HeaderRowProps {
@@ -58,16 +88,18 @@ const HeaderRow: React.FC<HeaderRowProps> = ({ isPhone }) => {
         width: '100%',
         background: '#222',
         color: '#fff',
+        paddingLeft: 14,
         fontWeight: 500,
       }}
     >
-      {visibleColumns.map(col => (
+      {visibleColumns.map((col, i) => (
         <div
           key={col.label}
           style={{
             flex: getFlex(col, isPhone),
             padding: '8px 16px',
-            textAlign: col.label === 'Title' ? 'left' : 'right',
+            paddingRight: i === visibleColumns.length - 1 ? 28 : 16,
+            textAlign: col.align,
             minWidth: col.width,
           }}
         >
@@ -83,6 +115,7 @@ const AllSongs: React.FC = () => {
   const { invokeEventToMainProcess } = useIpc();
   const { dispatch, state } = useContext(store);
   const handleScroll = useScrollHidePlayerBar();
+  const navigate = useNavigate();
 
   const {
     data: songs = [] as Track[],
@@ -100,7 +133,6 @@ const AllSongs: React.FC = () => {
       dispatch({ type: 'SET_PLAYER_BAR_VISIBLE', payload: true });
     };
   }, [dispatch]);
-
 
   const handleSongClick = React.useCallback(
     (clickedIndex: number): void => {
@@ -128,35 +160,65 @@ const AllSongs: React.FC = () => {
             width: '100%',
             alignItems: 'center',
             borderBottom: '1px solid #333',
-            background: index % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
+            borderRadius: 0.5,
+            background: index % 2 === 0 ? 'rgba(255,255,255,0.0)' : 'rgba(255,255,255,0.03)',
             '&:hover': {
               background: 'rgba(255,255,255,0.08)',
             },
           }}
-          key={song.Id != null ? String(song.Id) : index}
-          onClick={() => handleSongClick(index)}
+          onClick={e => {
+            if ((e.target as HTMLElement).closest('[data-nav-cell]')) return;
+            handleSongClick(index);
+          }}
         >
-          {visibleColumns.map(col => (
-            <Box
-              key={col.label}
-              sx={{
-                flex: getFlex(col, isPhone),
-                px: 2,
-                textAlign: col.label === 'Title' ? 'left' : 'right',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              <Typography variant="body2" noWrap>
-                {(song[col.key] as string) || ''}
-              </Typography>
-            </Box>
-          ))}
+          {visibleColumns.map((col, i) => {
+            const navPath = col.getNavPath?.(song) ?? null;
+            const isLast = i === visibleColumns.length - 1;
+            return (
+              <Box
+                key={col.label}
+                sx={{
+                  flex: getFlex(col, isPhone),
+                  pl: 2,
+                  pr: isLast ? 3.5 : 2,
+                  minWidth: col.width,
+                  textAlign: col.align,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {navPath ? (
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    data-nav-cell="true"
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => {
+                      e.stopPropagation();
+                      navigate(navPath);
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': { textDecoration: 'underline', color: 'primary.main' },
+                    }}
+                  >
+                    {(song[col.key] as string) || ''}
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" noWrap>
+                    {col.key === 'Duration'
+                      ? formatDuration(song[col.key])
+                      : (song[col.key] as string) || ''}
+                  </Typography>
+                )}
+              </Box>
+            );
+          })}
         </ListItemButton>
       );
     },
-    [songs, dispatch, isPhone, state.track?.Id, handleSongClick]
+    [songs, dispatch, isPhone, state.track?.Id, handleSongClick, navigate]
   );
 
   if (isLoading)
@@ -205,6 +267,7 @@ const AllSongs: React.FC = () => {
                 itemSize={43}
                 width={width}
                 onScroll={handleScroll}
+                outerElementType={ScrollContainer}
               >
                 {Row}
               </FixedSizeList>

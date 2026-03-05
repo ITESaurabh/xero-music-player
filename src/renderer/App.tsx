@@ -49,10 +49,8 @@ const App = () => {
 
   // Refresh all queries when the main process reports new/updated library files
   useEffect(() => {
-    const handler = (_event: Electron.IpcRendererEvent, { scanned }: { scanned: number }) => {
-      if (scanned > 0) {
-        queryClient.invalidateQueries();
-      }
+    const handler = () => {
+      queryClient.invalidateQueries();
     };
     ipcRenderer.on('library-updated', handler);
     return () => {

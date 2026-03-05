@@ -217,6 +217,7 @@ export default function mainIpcs(mainWin) {
       if (msg.type === 'progress') {
         sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
       } else if (msg.success) {
+        sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });
         resolvePromise({ success: true, scanned: msg.scanned });
       } else {
         rejectPromise(msg.error);
@@ -263,6 +264,7 @@ export default function mainIpcs(mainWin) {
       if (msg.type === 'progress') {
         sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
       } else if (msg.success) {
+        sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });
         resolvePromise({ success: true, scanned: msg.scanned });
       } else {
         rejectPromise(msg.error);
@@ -414,6 +416,7 @@ export default function mainIpcs(mainWin) {
         Track.TrackNumber,
         Track.AlbumArt,
         Track.Duration,
+        Track.AlbumId,
         Artist.Name AS ArtistName,
         Album.Title AS AlbumTitle,
         Genre.Name AS GenreName

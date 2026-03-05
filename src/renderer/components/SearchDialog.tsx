@@ -130,6 +130,9 @@ export default function SearchDialog() {
       });
       dispatch({ type: 'SET_CURR_TRACK', payload: result });
       dispatch({ type: 'SET_IS_PLAYING', payload: true });
+    } else if (category.type === 'albums') {
+      const id = result.Id ?? result.id;
+      navigate(id != null ? `/main_window/albums/${id}` : category.href);
     } else {
       navigate(category.href);
     }

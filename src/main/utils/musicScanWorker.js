@@ -37,10 +37,11 @@ function parseMusicWorker(filePath, config) {
         year: '',
         albumArt: '', // will be set later
         picture: null, // keep raw picture for later
+        duration: 0,
       },
     };
     jsmediatags.read(filePath, {
-      onSuccess: function (tag) {
+      onSuccess: async function (tag) {
         let { type, tags } = tag;
         music.fileInfo.tagType = type;
         music.tags.title = tags.title;
@@ -51,6 +52,13 @@ function parseMusicWorker(filePath, config) {
         music.tags.year = tags.year;
         if (tag && tags.picture && tags.picture.data) {
           music.tags.picture = tags.picture;
+        }
+        try {
+          const mm = await import('music-metadata');
+          const mmMeta = await mm.parseFile(filePath, { skipCovers: true });
+          music.tags.duration = Math.round(mmMeta.format.duration || 0);
+        } catch (e) {
+          music.tags.duration = 0;
         }
         resolve(music);
       },
@@ -65,6 +73,7 @@ function parseMusicWorker(filePath, config) {
           music.tags.track = metadata.common?.track?.no || '';
           music.tags.genre = (metadata.common?.genre && metadata.common.genre.join(',')) || '';
           music.tags.year = metadata.common?.year || '';
+          music.tags.duration = Math.round(metadata.format?.duration || 0);
           // Album art fallback
           if (metadata.common.picture && metadata.common.picture.length > 0) {
             const picture = metadata.common.picture[0];
@@ -159,8 +168,8 @@ function insertTrack(db, config, filePath, musicInfo, fileHash) {
       : musicInfo.fileInfo.fileName;
 
   db.prepare(
-    `INSERT INTO Track (Uri, Extension, Title, ArtistId, AlbumId, GenreId, TrackNumber, Year, AlbumArt, FileHash, DateAdded, Version, FolderPath)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO Track (Uri, Extension, Title, ArtistId, AlbumId, GenreId, TrackNumber, Year, AlbumArt, FileHash, Duration, DateAdded, Version, FolderPath)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     filePath,
     musicInfo.fileInfo.fileExt,
@@ -172,6 +181,7 @@ function insertTrack(db, config, filePath, musicInfo, fileHash) {
     musicInfo.tags.year,
     albumArt,
     fileHash,
+    musicInfo.tags.duration || null,
     Date.now(),
     1,
     folderpath
@@ -212,7 +222,7 @@ function updateTrack(db, config, filePath, musicInfo, fileHash, trackId) {
       : musicInfo.fileInfo.fileName;
 
   db.prepare(
-    `UPDATE Track SET Extension = ?, Title = ?, ArtistId = ?, AlbumId = ?, GenreId = ?, TrackNumber = ?, Year = ?, AlbumArt = ?, FileHash = ?, DateAdded = ?, Version = ?, FolderPath = ? WHERE Id = ?`
+    `UPDATE Track SET Extension = ?, Title = ?, ArtistId = ?, AlbumId = ?, GenreId = ?, TrackNumber = ?, Year = ?, AlbumArt = ?, FileHash = ?, Duration = ?, DateAdded = ?, Version = ?, FolderPath = ? WHERE Id = ?`
   ).run(
     musicInfo.fileInfo.fileExt,
     trackTitle,
@@ -223,6 +233,7 @@ function updateTrack(db, config, filePath, musicInfo, fileHash, trackId) {
     musicInfo.tags.year,
     albumArt,
     fileHash,
+    musicInfo.tags.duration || null,
     Date.now(),
     1,
     folderpath,
@@ -308,14 +319,14 @@ async function runFullScan(db, folders, config, supportedFileTypes) {
     for (const filePath of supportedFiles) {
       try {
         const fileHash = await getFileHash(filePath);
-        const musicInfo = await parseMusicWorker(filePath, config);
-        const trackRow = db.prepare('SELECT Id, FileHash FROM Track WHERE Uri = ?').get(filePath);
-        if (!trackRow) {
-          insertTrack(db, config, filePath, musicInfo, fileHash);
-          scanned++;
-          folderScanned++;
-        } else if (trackRow.FileHash !== fileHash) {
-          updateTrack(db, config, filePath, musicInfo, fileHash, trackRow.Id);
+        const trackRow = db.prepare('SELECT Id, FileHash, Duration FROM Track WHERE Uri = ?').get(filePath);
+        if (!trackRow || trackRow.FileHash !== fileHash || trackRow.Duration == null) {
+          const musicInfo = await parseMusicWorker(filePath, config);
+          if (!trackRow) {
+            insertTrack(db, config, filePath, musicInfo, fileHash);
+          } else {
+            updateTrack(db, config, filePath, musicInfo, fileHash, trackRow.Id);
+          }
           scanned++;
           folderScanned++;
         }
