@@ -56,7 +56,11 @@ const ScrollContainer = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDiv
     <div
       {...rest}
       ref={ref}
-      style={{ ...style, overflowY: 'overlay' as React.CSSProperties['overflowY'] }}
+      style={{
+        ...style,
+        overflowY: 'overlay' as React.CSSProperties['overflowY'],
+        overflowX: 'hidden',
+      }}
     />
   )
 );
@@ -100,7 +104,8 @@ const HeaderRow: React.FC<HeaderRowProps> = ({ isPhone }) => {
             padding: '8px 16px',
             paddingRight: i === visibleColumns.length - 1 ? 28 : 16,
             textAlign: col.align,
-            minWidth: col.width,
+            minWidth: 0,
+            overflow: 'hidden',
           }}
         >
           {col.label}
@@ -181,7 +186,7 @@ const AllSongs: React.FC = () => {
                   flex: getFlex(col, isPhone),
                   pl: 2,
                   pr: isLast ? 3.5 : 2,
-                  minWidth: col.width,
+                  minWidth: 0,
                   textAlign: col.align,
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',

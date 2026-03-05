@@ -18,7 +18,7 @@ import ShuffleOnRoundedIcon from '@mui/icons-material/ShuffleOnRounded';
 import RepeatOneOnRoundedIcon from '@mui/icons-material/RepeatOneOnRounded';
 import RepeatOnRoundedIcon from '@mui/icons-material/RepeatOnRounded';
 import { store, RepeatMode } from '../utils/store';
-import { getVolumeLevel, setVolumeLevel } from '../utils/LocStoreUtil';
+import { getVolumeLevel, setVolumeLevel, getOverlayEnabled } from '../utils/LocStoreUtil';
 import speaker132Regular from '@iconify/icons-fluent/speaker-1-32-regular';
 import speaker232Regular from '@iconify/icons-fluent/speaker-2-32-regular';
 import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
@@ -229,6 +229,44 @@ export default function PlayBar() {
   const albumArtSrc = state.track?.AlbumArt
     ? `file:///${(state.track.AlbumArt as string).replace(/\\/g, '/')}`
     : DEFAULT_AA;
+
+  // ── Always-on-top overlay notification ─────────────────────────────────
+  useEffect(() => {
+    if (!state.track?.Id) return;
+    if (!getOverlayEnabled()) return;
+    ipcRenderer.send('now-playing-notify', {
+      title: (state.track.Title as string) || '',
+      artist: (state.track.ArtistName as string) || '',
+      album: (state.track.AlbumTitle as string) || '',
+      albumArt: (state.track.AlbumArt as string) || null,
+      queueIndex: state.queueIndex,
+      queueTotal: state.queue.length,
+      status: 'new-track',
+    });
+  }, [state.track?.Id]);
+
+  // ── Play / Pause overlay ─────────────────────────────────────────────────
+  const prevPausedRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!state.track?.Id) return;
+    // Skip the very first render to avoid a spurious 'playing' flash on mount
+    if (prevPausedRef.current === null) {
+      prevPausedRef.current = paused;
+      return;
+    }
+    if (prevPausedRef.current === paused) return;
+    prevPausedRef.current = paused;
+    if (!getOverlayEnabled()) return;
+    ipcRenderer.send('now-playing-notify', {
+      title: (state.track.Title as string) || '',
+      artist: (state.track.ArtistName as string) || '',
+      album: (state.track.AlbumTitle as string) || '',
+      albumArt: (state.track.AlbumArt as string) || null,
+      queueIndex: state.queueIndex,
+      queueTotal: state.queue.length,
+      status: paused ? 'paused' : 'playing',
+    });
+  }, [paused]);
 
   // --- Media Session API ---
   // Update OS metadata (Now Playing, lock screen, taskbar) when track changes

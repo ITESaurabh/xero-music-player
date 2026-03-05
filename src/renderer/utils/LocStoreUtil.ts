@@ -45,3 +45,12 @@ export function getQueueState(): QueueState | null {
   const state = localStorage.getItem('queue_state');
   return state ? (JSON.parse(state) as QueueState) : null;
 }
+
+export function getOverlayEnabled(): boolean {
+  const val = localStorage.getItem('overlay_enabled');
+  return val === null ? true : val === 'true';
+}
+
+export function setOverlayEnabled(enabled: boolean): void {
+  localStorage.setItem('overlay_enabled', String(enabled));
+}

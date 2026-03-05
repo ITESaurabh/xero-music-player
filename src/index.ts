@@ -10,6 +10,7 @@ const currOS = os.type();
 // Webpack-injected entry point URLs
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MINI_PLAYER_WEBPACK_ENTRY: string;
+declare const OVERLAY_WEBPACK_ENTRY: string;
 
 // Handle Squirrel.Windows install/uninstall events, write registry entries,
 // and manage Desktop + Start Menu shortcuts.
@@ -233,7 +234,7 @@ const createWindow = () => {
     });
 
     // relocating all IPC Events to mainProcess file to declutter this file
-    mainIpcs(mainWin!);
+    mainIpcs(mainWin!, OVERLAY_WEBPACK_ENTRY);
     mainWin!.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   });
 };

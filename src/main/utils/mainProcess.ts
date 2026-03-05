@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron';
+import { BrowserWindow, dialog, ipcMain, nativeTheme, screen, shell } from 'electron';
 import { prevIcon, nextIcon, playIcon, pauseIcon } from '../thumbarIcons';
 import { parseDir, parseMusic } from '../modules/FileParser';
 import dbModule from '../../database';
@@ -21,7 +21,61 @@ function sendMessageToRendererProcess(
 ): void {
   window.webContents.send(message, payload);
 }
-export default function mainIpcs(mainWin) {
+export default function mainIpcs(mainWin, overlayEntry: string) {
+  // ── Always-on-top overlay window ────────────────────────────────────────────
+  let overlayWin: BrowserWindow | null = null;
+
+  function createOverlayWin(): BrowserWindow {
+    const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
+    const win = new BrowserWindow({
+      width: 310,
+      height: 108,
+      x: x + width - 326,
+      y: y + height - 124,
+      transparent: true,
+      frame: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      focusable: false,
+      resizable: false,
+      movable: false,
+      show: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        webSecurity: process.env.NODE_ENV !== 'development',
+      },
+    });
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setIgnoreMouseEvents(true);
+    win.loadURL(overlayEntry);
+    win.on('closed', () => { overlayWin = null; });
+    return win;
+  }
+
+  // Pre-create so it’s warm by the time the first track plays
+  overlayWin = createOverlayWin();
+
+  mainWin.on('close', () => {
+    if (overlayWin && !overlayWin.isDestroyed()) overlayWin.destroy();
+  });
+
+  ipcMain.on('now-playing-notify', (_, data) => {
+    if (!overlayWin || overlayWin.isDestroyed()) overlayWin = createOverlayWin();
+    const send = () => {
+      overlayWin!.webContents.send('show-overlay', data);
+      overlayWin!.showInactive();
+    };
+    if (overlayWin.webContents.isLoading()) {
+      overlayWin.webContents.once('did-finish-load', send);
+    } else {
+      send();
+    }
+  });
+
+  ipcMain.on('hide-overlay', () => {
+    if (overlayWin && !overlayWin.isDestroyed()) overlayWin.hide();
+  });
   // mainWin.webContents.send('asynchronous-message', {'SAVED': 'File Saved'});
   // mainWin.webContents.openDevTools();
 
