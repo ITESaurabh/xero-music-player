@@ -2207,13 +2207,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/jsmediatags@npm:^3.9.6":
-  version: 3.9.6
-  resolution: "@types/jsmediatags@npm:3.9.6"
-  checksum: 10c0/53ca911ca623b1b170f738cb91159b385d6d91ee583a0a49fe620db7929a1b43e528aa667cf17f3e54320e33db5a4999950178585bef588a40d37b0d03bcea2a
-  languageName: node
-  linkType: hard
-
 "@types/json-schema@npm:*, @types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.8, @types/json-schema@npm:^7.0.9":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
@@ -6834,15 +6827,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsmediatags@npm:^3.9.7":
-  version: 3.9.7
-  resolution: "jsmediatags@npm:3.9.7"
-  dependencies:
-    xhr2: "npm:^0.1.4"
-  checksum: 10c0/fb5261652a6e8cbdc8df532b453d8068fee5a40eb79f512a760a507794d4ea15fecab6917c33d66c93d478a33d6592349135e9d1461328311aa3ad435fc39d5a
-  languageName: node
-  linkType: hard
-
 "json-buffer@npm:3.0.1":
   version: 3.0.1
   resolution: "json-buffer@npm:3.0.1"
@@ -11213,7 +11197,6 @@ __metadata:
     "@tanstack/react-query": "npm:^5.84.2"
     "@tanstack/react-query-devtools": "npm:^5.84.2"
     "@types/better-sqlite3": "npm:^7.6.13"
-    "@types/jsmediatags": "npm:^3.9.6"
     "@types/minimist": "npm:^1.2.5"
     "@types/mui-image": "npm:^1.0.5"
     "@types/node": "npm:^25.3.0"
@@ -11230,7 +11213,6 @@ __metadata:
     eslint: "npm:^8.57.1"
     eslint-plugin-import: "npm:^2.32.0"
     fork-ts-checker-webpack-plugin: "npm:^7.2.13"
-    jsmediatags: "npm:^3.9.7"
     minimist: "npm:^1.2.8"
     motion: "npm:^12.29.2"
     mui-image: "npm:^1.0.7"
@@ -11252,13 +11234,6 @@ __metadata:
     typescript: "npm:^5.9.3"
   languageName: unknown
   linkType: soft
-
-"xhr2@npm:^0.1.4":
-  version: 0.1.4
-  resolution: "xhr2@npm:0.1.4"
-  checksum: 10c0/9fc751dfc5696f239083eeee8a05f5efc6ca4eb09be40b705197d8b5d1aaa4c01a03290f26ed5618862dfaaef8016bb43ab68d26b87f5c46305a34cb81264278
-  languageName: node
-  linkType: hard
 
 "xml2js@npm:0.4.17":
   version: 0.4.17

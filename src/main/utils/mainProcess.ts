@@ -1,6 +1,5 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme, screen, shell } from 'electron';
 import { prevIcon, nextIcon, playIcon, pauseIcon } from '../thumbarIcons';
-import { parseDir, parseMusic } from '../modules/FileParser';
 import dbModule from '../../database';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = dbModule;
@@ -28,7 +27,7 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   function createOverlayWin(): BrowserWindow {
     const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
     const win = new BrowserWindow({
-      width: 310,
+      width: 326,
       height: 108,
       x: x + width - 326,
       y: y + height - 124,
@@ -49,7 +48,9 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setIgnoreMouseEvents(true);
     win.loadURL(overlayEntry);
-    win.on('closed', () => { overlayWin = null; });
+    win.on('closed', () => {
+      overlayWin = null;
+    });
     return win;
   }
 
@@ -61,6 +62,8 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   });
 
   ipcMain.on('now-playing-notify', (_, data) => {
+    // Don't show the overlay when the main window is in focus
+    if (mainWin.isFocused()) return;
     if (!overlayWin || overlayWin.isDestroyed()) overlayWin = createOverlayWin();
     const send = () => {
       overlayWin!.webContents.send('show-overlay', data);
@@ -75,6 +78,14 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
 
   ipcMain.on('hide-overlay', () => {
     if (overlayWin && !overlayWin.isDestroyed()) overlayWin.hide();
+  });
+
+  // ── Played-times tracking ────────────────────────────────────────────────────
+  ipcMain.on('track-played', (_, { trackId }) => {
+    if (!trackId) return;
+    db.prepare(
+      'UPDATE Track SET PlayedTimes = COALESCE(PlayedTimes, 0) + 1, LastPlayedAt = ? WHERE Id = ?'
+    ).run(Date.now(), trackId);
   });
   // mainWin.webContents.send('asynchronous-message', {'SAVED': 'File Saved'});
   // mainWin.webContents.openDevTools();
@@ -129,19 +140,6 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
       type: 'warning',
       message: 'Application is not responding…',
     });
-  });
-
-  ipcMain.on('process-files', (e, payload) => {
-    console.log(payload);
-    const SongsPathList = parseDir(payload);
-    SongsPathList.forEach(async songPath => {
-      const SongInfo = await parseMusic(songPath);
-      console.info('Info', SongInfo);
-    });
-  });
-  ipcMain.on('my-message', (e, payload) => {
-    console.log('YO');
-    sendMessageToRendererProcess(mainWin, 'my-reply', 'data');
   });
 
   // ── Thumbnail toolbar (Windows taskbar media controls) ──────────────────────
@@ -223,53 +221,97 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
 
   ipcMain.handle('get-library-stats', () => {
     try {
-      const songs = (db.prepare('SELECT COUNT(*) AS count FROM Track').get() as { count: number }).count;
-      const albums = (db.prepare('SELECT COUNT(*) AS count FROM Album').get() as { count: number }).count;
-      const artists = (db.prepare('SELECT COUNT(*) AS count FROM Artist').get() as { count: number }).count;
-      const albumArtists = (db.prepare('SELECT COUNT(DISTINCT ArtistId) AS count FROM Album').get() as { count: number }).count;
-      const genres = (db.prepare('SELECT COUNT(*) AS count FROM Genre').get() as { count: number }).count;
-      const years = (db.prepare("SELECT COUNT(DISTINCT Year) AS count FROM Track WHERE Year IS NOT NULL AND Year != ''").get() as { count: number }).count;
-      const folders = (db.prepare("SELECT COUNT(DISTINCT FolderPath) AS count FROM Track WHERE FolderPath IS NOT NULL").get() as { count: number }).count;
+      const songs = (db.prepare('SELECT COUNT(*) AS count FROM Track').get() as { count: number })
+        .count;
+      const albums = (db.prepare('SELECT COUNT(*) AS count FROM Album').get() as { count: number })
+        .count;
+      const artists = (
+        db.prepare('SELECT COUNT(*) AS count FROM Artist').get() as { count: number }
+      ).count;
+      const albumArtists = (
+        db.prepare('SELECT COUNT(DISTINCT ArtistId) AS count FROM Album').get() as { count: number }
+      ).count;
+      const genres = (db.prepare('SELECT COUNT(*) AS count FROM Genre').get() as { count: number })
+        .count;
+      const years = (
+        db
+          .prepare(
+            "SELECT COUNT(DISTINCT Year) AS count FROM Track WHERE Year IS NOT NULL AND Year != ''"
+          )
+          .get() as { count: number }
+      ).count;
+      const folders = (
+        db
+          .prepare(
+            'SELECT COUNT(DISTINCT FolderPath) AS count FROM Track WHERE FolderPath IS NOT NULL'
+          )
+          .get() as { count: number }
+      ).count;
       // Favourites and Playlists tables don't exist yet — return 0
       const favourites = 0;
       const playlists = 0;
-      return { songs, albums, artists, albumArtists, genres, years, folders, favourites, playlists };
+      return {
+        songs,
+        albums,
+        artists,
+        albumArtists,
+        genres,
+        years,
+        folders,
+        favourites,
+        playlists,
+      };
     } catch {
-      return { songs: 0, albums: 0, artists: 0, albumArtists: 0, genres: 0, years: 0, folders: 0, favourites: 0, playlists: 0 };
+      return {
+        songs: 0,
+        albums: 0,
+        artists: 0,
+        albumArtists: 0,
+        genres: 0,
+        years: 0,
+        folders: 0,
+        favourites: 0,
+        playlists: 0,
+      };
     }
   });
 
-  ipcMain.handle('scan-media', async () => {
-    // Prevent duplicate workers
+  function spawnScanWorker(mode: 'basic' | 'full'): Promise<unknown> {
     if (activeScanWorker) {
-      return { success: false, error: 'Scan already in progress' };
+      return Promise.resolve({ success: false, error: 'Scan already in progress' });
     }
-
-    // Get all music folders
     const folders = db.prepare('SELECT * FROM MusicFolder').all();
-    if (!folders.length) return { success: false, error: 'No folders to scan' };
+    if (!folders.length) return Promise.resolve({ success: false, error: 'No folders to scan' });
 
-    // Prepare config
-    const config = {
-      APP_CONF_FOLDER,
-      MUSIC_DIR,
-      ALBUM_ART_DIR,
-      ARTIST_ART_DIR,
-    };
-
-    // Spawn a worker process for scanning (basic/optimistic mode)
-    activeScanWorker = fork(path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js'));
-    activeScanWorker.send({ folders, config, mode: 'basic' });
+    const config = { APP_CONF_FOLDER, MUSIC_DIR, ALBUM_ART_DIR, ARTIST_ART_DIR };
+    activeScanWorker = fork(
+      path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js')
+    );
+    activeScanWorker.send({ folders, config, mode });
     sendMessageToRendererProcess(mainWin, 'scan-start', null);
 
     let resolvePromise: (v: unknown) => void;
     let rejectPromise: (e: unknown) => void;
-    const scanPromise = new Promise((res, rej) => { resolvePromise = res; rejectPromise = rej; });
+    const scanPromise = new Promise((res, rej) => {
+      resolvePromise = res;
+      rejectPromise = rej;
+    });
 
     activeScanWorker.on('message', rawMsg => {
-      const msg = rawMsg as { type?: string; success?: boolean; scanned?: number; total?: number; processed?: number; error?: string };
+      const msg = rawMsg as {
+        type?: string;
+        success?: boolean;
+        scanned?: number;
+        total?: number;
+        processed?: number;
+        error?: string;
+      };
       if (msg.type === 'progress') {
-        sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
+        sendMessageToRendererProcess(mainWin, 'scan-progress', {
+          scanned: msg.scanned,
+          total: msg.total,
+          processed: msg.processed,
+        });
       } else if (msg.success) {
         sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });
         resolvePromise({ success: true, scanned: msg.scanned });
@@ -277,65 +319,20 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
         rejectPromise(msg.error);
       }
     });
-    activeScanWorker.on('error', err => {
-      rejectPromise(err);
-    });
+    activeScanWorker.on('error', err => rejectPromise(err));
     activeScanWorker.on('exit', (code: number) => {
-      console.log(`[scan-media] Worker exited with code ${code}`);
+      console.log(`[${mode}-scan] Worker exited with code ${code}`);
       activeScanWorker = null;
       sendMessageToRendererProcess(mainWin, 'scan-end', null);
       if (code !== 0) rejectPromise('Worker exited with code ' + code);
     });
 
     return scanPromise;
-  });
+  }
 
-  ipcMain.handle('full-rescan', async () => {
-    if (activeScanWorker) {
-      return { success: false, error: 'Scan already in progress' };
-    }
+  ipcMain.handle('scan-media', () => spawnScanWorker('basic'));
 
-    const folders = db.prepare('SELECT * FROM MusicFolder').all();
-    if (!folders.length) return { success: false, error: 'No folders to scan' };
-
-    const config = {
-      APP_CONF_FOLDER,
-      MUSIC_DIR,
-      ALBUM_ART_DIR,
-      ARTIST_ART_DIR,
-    };
-
-    activeScanWorker = fork(path.resolve(process.cwd(), 'src', 'main', 'utils', 'musicScanWorker.js'));
-    activeScanWorker.send({ folders, config, mode: 'full' });
-    sendMessageToRendererProcess(mainWin, 'scan-start', null);
-
-    let resolvePromise: (v: unknown) => void;
-    let rejectPromise: (e: unknown) => void;
-    const scanPromise = new Promise((res, rej) => { resolvePromise = res; rejectPromise = rej; });
-
-    activeScanWorker.on('message', rawMsg => {
-      const msg = rawMsg as { type?: string; success?: boolean; scanned?: number; total?: number; processed?: number; error?: string };
-      if (msg.type === 'progress') {
-        sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
-      } else if (msg.success) {
-        sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });
-        resolvePromise({ success: true, scanned: msg.scanned });
-      } else {
-        rejectPromise(msg.error);
-      }
-    });
-    activeScanWorker.on('error', err => {
-      rejectPromise(err);
-    });
-    activeScanWorker.on('exit', (code: number) => {
-      console.log(`[full-rescan] Worker exited with code ${code}`);
-      activeScanWorker = null;
-      sendMessageToRendererProcess(mainWin, 'scan-end', null);
-      if (code !== 0) rejectPromise('Worker exited with code ' + code);
-    });
-
-    return scanPromise;
-  });
+  ipcMain.handle('full-rescan', () => spawnScanWorker('full'));
 
   mainWin.webContents.on('before-input-event', (event, input) => {
     if ((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') {
@@ -409,10 +406,21 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
     ReleaseYear INTEGER,
     DateAdded BIGINT,
     Version INTEGER,
-    FolderPath TEXT
+    FolderPath TEXT,
+    PlayedTimes INTEGER DEFAULT 0,
+    LastPlayedAt BIGINT
   )
 `
   ).run();
+
+  // ── Migrations for existing databases ────────────────────────────────────────
+  const existingCols = (db.pragma('table_info(Track)') as { name: string }[]).map(c => c.name);
+  if (!existingCols.includes('PlayedTimes')) {
+    db.prepare('ALTER TABLE Track ADD COLUMN PlayedTimes INTEGER DEFAULT 0').run();
+  }
+  if (!existingCols.includes('LastPlayedAt')) {
+    db.prepare('ALTER TABLE Track ADD COLUMN LastPlayedAt BIGINT').run();
+  }
 
   ipcMain.handle('add-music-folder', async e => {
     const result = await dialog.showOpenDialog(mainWin, {
@@ -434,6 +442,9 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
     );
     stmt.run(folderPath, folderName, stats.mtimeMs, itemsCount, 1);
 
+    // Auto-scan the new folder immediately
+    spawnScanWorker('basic').catch(err => console.error('[add-folder] Scan error:', err));
+
     return {
       success: true,
       folder: {
@@ -452,8 +463,28 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   });
 
   ipcMain.handle('remove-music-folder', (e, { Id }) => {
-    const stmt = db.prepare('DELETE FROM MusicFolder WHERE Id = ?');
-    stmt.run(Id);
+    db.prepare('DELETE FROM MusicFolder WHERE Id = ?').run(Id);
+
+    // If no folders remain, wipe all library data and album art
+    const remaining = db.prepare('SELECT COUNT(*) AS cnt FROM MusicFolder').get() as {
+      cnt: number;
+    };
+    if (remaining.cnt === 0) {
+      db.prepare('DELETE FROM Track').run();
+      db.prepare('DELETE FROM Album').run();
+      db.prepare('DELETE FROM Artist').run();
+      db.prepare('DELETE FROM Genre').run();
+      // Remove all saved album art files
+      try {
+        const files = fs.readdirSync(ALBUM_ART_DIR);
+        for (const file of files) {
+          fs.unlinkSync(path.join(ALBUM_ART_DIR, file));
+        }
+      } catch {
+        // Directory may not exist yet — safe to ignore
+      }
+    }
+
     return { success: true };
   });
 
@@ -803,9 +834,20 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
     sendMessageToRendererProcess(mainWin, 'scan-start', null);
 
     activeScanWorker.on('message', rawMsg => {
-      const msg = rawMsg as { type?: string; success?: boolean; scanned?: number; total?: number; processed?: number; error?: string };
+      const msg = rawMsg as {
+        type?: string;
+        success?: boolean;
+        scanned?: number;
+        total?: number;
+        processed?: number;
+        error?: string;
+      };
       if (msg.type === 'progress') {
-        sendMessageToRendererProcess(mainWin, 'scan-progress', { scanned: msg.scanned, total: msg.total, processed: msg.processed });
+        sendMessageToRendererProcess(mainWin, 'scan-progress', {
+          scanned: msg.scanned,
+          total: msg.total,
+          processed: msg.processed,
+        });
       } else if (msg.success) {
         console.log(`[Auto-scan] Found ${msg.scanned} new file(s).`);
         sendMessageToRendererProcess(mainWin, 'library-updated', { scanned: msg.scanned });

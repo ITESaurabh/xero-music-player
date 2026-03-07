@@ -10,7 +10,7 @@ import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
 import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import { Icon } from '@iconify/react';
-import { Card, useMediaQuery } from '@mui/material';
+import { Card, Link, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import DiscordIcon from 'svg-react-loader?name=DiscordIcon!../../img/discord-logo.svg';
 import { RepeatRounded, ShuffleRounded } from '@mui/icons-material';
@@ -26,6 +26,8 @@ import { Image } from 'mui-image';
 import { DEFAULT_AA } from '../../config/constants';
 const { ipcRenderer } = window.require('electron');
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router';
+import { parseFile } from 'music-metadata';
 
 const CoverImage = styled(Box)(({ theme }) => ({
   width: 140,
@@ -52,10 +54,9 @@ const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
-
-
 export default function PlayBar() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const isDark = theme.palette.mode === 'dark';
   const { state, dispatch } = useContext(store);
   const defaultVol = getVolumeLevel();
@@ -89,6 +90,10 @@ export default function PlayBar() {
     if (audioRef.current && songPath && Array.isArray(state?.queue) && state.queue.length > 0) {
       // Convert file path to file:// URL for proper audio loading
       const fileUrl = `file://${songPath.replace(/\\/g, '/')}`;
+
+      parseFile(songPath, { skipCovers: false }).then(metadata => {
+        console.log('TAGS', metadata);
+      });
       audioRef.current.src = fileUrl;
       audioRef.current.volume = defaultVol / 100;
       // Play only after loadedmetadata
@@ -244,6 +249,23 @@ export default function PlayBar() {
       status: 'new-track',
     });
   }, [state.track?.Id]);
+
+  // ── Track play count / last-played tracking (≥70% listened) ────────────
+  const playedCountedRef = useRef(false);
+  // Reset the flag whenever the track changes
+  useEffect(() => {
+    playedCountedRef.current = false;
+  }, [state.track?.Id]);
+  // Fire once when position crosses 70% of duration
+  useEffect(() => {
+    if (!state.track?.Id) return;
+    if (playedCountedRef.current) return;
+    if (!duration || duration <= 0) return;
+    if (position / duration >= 0.7) {
+      playedCountedRef.current = true;
+      ipcRenderer.send('track-played', { trackId: state.track.Id });
+    }
+  }, [position, duration, state.track?.Id]);
 
   // ── Play / Pause overlay ─────────────────────────────────────────────────
   const prevPausedRef = useRef<boolean | null>(null);
@@ -530,6 +552,19 @@ export default function PlayBar() {
                 noWrap={!isPhone}
                 maxWidth={'360px'}
                 className="no-select no-drag"
+                sx={{
+                  color: theme.palette.primary.main,
+                  // fontWeight: 500,
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' },
+                }}
+                onClick={() => {
+                  const navPath =
+                    state.track?.AlbumId != null
+                      ? `/main_window/albums/${state.track.AlbumId}`
+                      : null;
+                  if (navPath) navigate(navPath);
+                }}
                 title={(state.track?.AlbumTitle as string) || ''}
               >
                 {(state.track?.AlbumTitle as string) || 'Unknown Album'}

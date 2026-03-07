@@ -25,15 +25,22 @@ export const IpcProvider = ({ children }: IpcProviderProps) => {
   const { dispatch } = useContext(store);
 
   // Sync scan state on mount — the auto-scan may have started before React mounted
+  // Note: these handlers are only registered in the main window context, not the mini player.
   useEffect(() => {
-    ipcRenderer.invoke('get-scan-status').then((res: unknown) => {
-      const status = res as { isScanning: boolean };
-      dispatch({ type: 'SET_SCANNING', payload: status.isScanning });
-    });
+    ipcRenderer
+      .invoke('get-scan-status')
+      .then((res: unknown) => {
+        const status = res as { isScanning: boolean };
+        dispatch({ type: 'SET_SCANNING', payload: status.isScanning });
+      })
+      .catch(() => undefined);
     // Fetch initial library stats
-    ipcRenderer.invoke('get-library-stats').then((res: unknown) => {
-      dispatch({ type: 'SET_LIBRARY_STATS', payload: res as LibraryStats });
-    });
+    ipcRenderer
+      .invoke('get-library-stats')
+      .then((res: unknown) => {
+        dispatch({ type: 'SET_LIBRARY_STATS', payload: res as LibraryStats });
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -63,15 +70,21 @@ export const IpcProvider = ({ children }: IpcProviderProps) => {
     const handleScanStart = () => {
       dispatch({ type: 'SET_SCANNING', payload: true });
     };
-    const handleScanProgress = (_event: Electron.IpcRendererEvent, arg: { scanned: number; total: number; processed: number }) => {
+    const handleScanProgress = (
+      _event: Electron.IpcRendererEvent,
+      arg: { scanned: number; total: number; processed: number }
+    ) => {
       dispatch({ type: 'SET_SCAN_PROGRESS', payload: arg });
     };
     const handleScanEnd = () => {
       dispatch({ type: 'SET_SCANNING', payload: false });
       // Refresh stats after scan completes
-      ipcRenderer.invoke('get-library-stats').then((res: unknown) => {
-        dispatch({ type: 'SET_LIBRARY_STATS', payload: res as LibraryStats });
-      });
+      ipcRenderer
+        .invoke('get-library-stats')
+        .then((res: unknown) => {
+          dispatch({ type: 'SET_LIBRARY_STATS', payload: res as LibraryStats });
+        })
+        .catch(() => undefined);
     };
 
     ipcRenderer.on('scan-start', handleScanStart);

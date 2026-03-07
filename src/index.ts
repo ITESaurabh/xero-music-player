@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, screen, nativeTheme, Menu } from 'electron';
+import minimist from 'minimist';
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -87,14 +88,13 @@ let miniWin: BrowserWindow | null = null;
 let loadingWin: BrowserWindow | null = null;
 Menu.setApplicationMenu(null);
 
-const minimist = require('minimist');
 const parsedArgs = minimist(process.argv.slice(1), {
   boolean: ['help', 'version'],
   string: ['file'],
   alias: { help: 'h', version: 'v', file: 'f' },
 });
 
-let isSingleInstance = app.requestSingleInstanceLock();
+const isSingleInstance = app.requestSingleInstanceLock();
 if (!isSingleInstance) {
   app.quit();
 }
@@ -166,11 +166,20 @@ const createWindow = () => {
             relaunchDisplayName: 'Xero Mini Player',
           });
         }
-        miniWin!.webContents.once('dom-ready', () => {
+        miniWin?.webContents.once('dom-ready', () => {
           miniWin!.show();
           miniWin!.webContents.send('play-mini', path.resolve(parsedArgs['file']));
           loadingWin!.hide();
           loadingWin!.close();
+        });
+        miniWin!.webContents.on('before-input-event', (event, input) => {
+          if (
+            (input.control && input.shift && input.key.toLowerCase() === 'i') ||
+            input.key === 'F12'
+          ) {
+            miniWin!.webContents.openDevTools();
+            event.preventDefault();
+          }
         });
         ipcMain.on('minimize', () => miniWin!.minimize());
         ipcMain.on('maximize', () => {

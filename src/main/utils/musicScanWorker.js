@@ -2,97 +2,53 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const fs = require('fs');
-const jsmediatags = require('jsmediatags');
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
 
-function removeMIME(str) {
-  return str.replace(/(\.mp3)|(\.m4a)|(\.ogg)|(\.wav)/gi, '');
-}
-
-function arrayBuff2ImgBuff(picture) {
-  // Convert jsmediatags picture to base64 string
-  const base64String = Buffer.from(picture.data).toString('base64');
-  return `data:image/${picture.type || 'jpg'};base64,${base64String}`;
-}
-
-function parseMusicWorker(filePath, config) {
-  return new Promise((resolve, reject) => {
-    let music = {
-      fileInfo: {
-        tagType: '',
-        path: filePath,
-        fileName: path.parse(filePath).name,
-        fileExt: path.parse(filePath).ext,
-        fileSize: fs.statSync(filePath).size,
-        folderName: path.parse(path.parse(filePath).dir).base,
-        folderpath: path.parse(filePath).dir,
-      },
-      tags: {
-        title: '',
-        artist: '',
-        album: '',
-        track: '',
-        genre: '',
-        year: '',
-        albumArt: '', // will be set later
-        picture: null, // keep raw picture for later
-        duration: 0,
-      },
-    };
-    jsmediatags.read(filePath, {
-      onSuccess: async function (tag) {
-        let { type, tags } = tag;
-        music.fileInfo.tagType = type;
-        music.tags.title = tags.title;
-        music.tags.artist = tags.artist;
-        music.tags.album = tags.album;
-        music.tags.track = tags.track;
-        music.tags.genre = tags.genre;
-        music.tags.year = tags.year;
-        if (tag && tags.picture && tags.picture.data) {
-          music.tags.picture = tags.picture;
-        }
-        try {
-          const mm = await import('music-metadata');
-          const mmMeta = await mm.parseFile(filePath, { skipCovers: true });
-          music.tags.duration = Math.round(mmMeta.format.duration || 0);
-        } catch (e) {
-          music.tags.duration = 0;
-        }
-        resolve(music);
-      },
-      onError: async function (error) {
-        // Fallback to music-metadata (dynamic import for Node < 22)
-        try {
-          const mm = await import('music-metadata');
-          const metadata = await mm.parseFile(filePath);
-          music.tags.title = metadata.common?.title || music.fileInfo.fileName;
-          music.tags.artist = metadata.common?.artist || '';
-          music.tags.album = metadata.common?.album || '';
-          music.tags.track = metadata.common?.track?.no || '';
-          music.tags.genre = (metadata.common?.genre && metadata.common.genre.join(',')) || '';
-          music.tags.year = metadata.common?.year || '';
-          music.tags.duration = Math.round(metadata.format?.duration || 0);
-          // Album art fallback
-          if (metadata.common.picture && metadata.common.picture.length > 0) {
-            const picture = metadata.common.picture[0];
-            const albumArtPath = path.join(
-              config.ALBUM_ART_DIR,
-              `${music.tags.album ? music.tags.album : removeMIME(music.fileInfo.fileName)}.${
-                picture.format || 'jpg'
-              }`
-            );
-            fs.writeFileSync(String(albumArtPath), Buffer.from(picture.data));
-            music.tags.albumArt = albumArtPath;
-          }
-        } catch (err) {
-          // If both fail, just resolve with basic info
-        }
-        resolve(music);
-      },
+// Cache the ESM import so it's resolved once for all files
+let mmPromise = null;
+function getMM() {
+  if (!mmPromise) {
+    mmPromise = import('music-metadata').catch(err => {
+      console.error('[worker] Failed to import music-metadata:', err);
+      process.send({ type: 'file-error', file: 'music-metadata import', error: String(err?.message || err) });
+      throw err;
     });
-  });
+  }
+  return mmPromise;
+}
+
+async function parseMusicWorker(filePath) {
+  const mm = await getMM();
+  const metadata = await mm.parseFile(filePath);
+  const picture = metadata.common.picture?.[0] || null;
+  return {
+    fileInfo: {
+      tagType: metadata.format.tagTypes?.[0] || '',
+      path: filePath,
+      fileName: path.parse(filePath).name,
+      fileExt: path.parse(filePath).ext,
+      fileSize: fs.statSync(filePath).size,
+      folderName: path.parse(path.parse(filePath).dir).base,
+      folderpath: path.parse(filePath).dir,
+    },
+    tags: {
+      title: metadata.common.title || '',
+      artist: metadata.common.artist || '',
+      album: metadata.common.album || '',
+      track: metadata.common.track?.no ?? null,
+      genre: metadata.common.genre?.length ? metadata.common.genre.join(', ') : '',
+      year: metadata.common.year ? String(metadata.common.year) : '',
+      albumArt: '',
+      picture: picture,
+      duration: Math.round(metadata.format.duration || 0),
+      bitrate: metadata.format.bitrate ? Math.round(metadata.format.bitrate) : null,
+      sampleRate: metadata.format.sampleRate || null,
+      channels: metadata.format.numberOfChannels || null,
+      discNumber: metadata.common.disk?.no || null,
+      releaseYear: metadata.common.year || null,
+    },
+  };
 }
 
 function getOrCreate(db, table, column, value, extra = {}) {
@@ -153,11 +109,7 @@ function insertTrack(db, config, filePath, musicInfo, fileHash) {
   if (albumId && musicInfo.tags.picture) {
     const albumArtPath = path.join(config.ALBUM_ART_DIR, `${albumId}.jpg`);
     if (!fs.existsSync(albumArtPath)) {
-      const base64Img = arrayBuff2ImgBuff(musicInfo.tags.picture);
-      const base64Data = base64Img.split(',')[1];
-      if (base64Data) {
-        fs.writeFileSync(String(albumArtPath), Buffer.from(base64Data, 'base64'));
-      }
+      fs.writeFileSync(String(albumArtPath), Buffer.from(musicInfo.tags.picture.data));
     }
     albumArt = albumArtPath;
   }
@@ -168,8 +120,8 @@ function insertTrack(db, config, filePath, musicInfo, fileHash) {
       : musicInfo.fileInfo.fileName;
 
   db.prepare(
-    `INSERT INTO Track (Uri, Extension, Title, ArtistId, AlbumId, GenreId, TrackNumber, Year, AlbumArt, FileHash, Duration, DateAdded, Version, FolderPath)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO Track (Uri, Extension, Title, ArtistId, AlbumId, GenreId, TrackNumber, Year, AlbumArt, FileHash, Duration, BitRate, SampleRate, Channels, DiscNumber, ReleaseYear, DateAdded, Version, FolderPath)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     filePath,
     musicInfo.fileInfo.fileExt,
@@ -182,6 +134,11 @@ function insertTrack(db, config, filePath, musicInfo, fileHash) {
     albumArt,
     fileHash,
     musicInfo.tags.duration || null,
+    musicInfo.tags.bitrate,
+    musicInfo.tags.sampleRate,
+    musicInfo.tags.channels,
+    musicInfo.tags.discNumber,
+    musicInfo.tags.releaseYear,
     Date.now(),
     1,
     folderpath
@@ -207,11 +164,7 @@ function updateTrack(db, config, filePath, musicInfo, fileHash, trackId) {
   if (albumId && musicInfo.tags.picture) {
     const albumArtPath = path.join(config.ALBUM_ART_DIR, `${albumId}.jpg`);
     if (!fs.existsSync(albumArtPath)) {
-      const base64Img = arrayBuff2ImgBuff(musicInfo.tags.picture);
-      const base64Data = base64Img.split(',')[1];
-      if (base64Data) {
-        fs.writeFileSync(String(albumArtPath), Buffer.from(base64Data, 'base64'));
-      }
+      fs.writeFileSync(String(albumArtPath), Buffer.from(musicInfo.tags.picture.data));
     }
     albumArt = albumArtPath;
   }
@@ -222,7 +175,7 @@ function updateTrack(db, config, filePath, musicInfo, fileHash, trackId) {
       : musicInfo.fileInfo.fileName;
 
   db.prepare(
-    `UPDATE Track SET Extension = ?, Title = ?, ArtistId = ?, AlbumId = ?, GenreId = ?, TrackNumber = ?, Year = ?, AlbumArt = ?, FileHash = ?, Duration = ?, DateAdded = ?, Version = ?, FolderPath = ? WHERE Id = ?`
+    `UPDATE Track SET Extension = ?, Title = ?, ArtistId = ?, AlbumId = ?, GenreId = ?, TrackNumber = ?, Year = ?, AlbumArt = ?, FileHash = ?, Duration = ?, BitRate = ?, SampleRate = ?, Channels = ?, DiscNumber = ?, ReleaseYear = ?, DateAdded = ?, Version = ?, FolderPath = ? WHERE Id = ?`
   ).run(
     musicInfo.fileInfo.fileExt,
     trackTitle,
@@ -234,6 +187,11 @@ function updateTrack(db, config, filePath, musicInfo, fileHash, trackId) {
     albumArt,
     fileHash,
     musicInfo.tags.duration || null,
+    musicInfo.tags.bitrate,
+    musicInfo.tags.sampleRate,
+    musicInfo.tags.channels,
+    musicInfo.tags.discNumber,
+    musicInfo.tags.releaseYear,
     Date.now(),
     1,
     folderpath,
@@ -273,11 +231,12 @@ async function runBasicScan(db, folders, config, supportedFileTypes) {
   for (const filePath of newFiles) {
     try {
       const fileHash = await getFileHash(filePath);
-      const musicInfo = await parseMusicWorker(filePath, config);
+      const musicInfo = await parseMusicWorker(filePath);
       insertTrack(db, config, filePath, musicInfo, fileHash);
       scanned++;
     } catch (err) {
-      console.error('[basic-scan] Insert error:', err);
+      console.error('[basic-scan] Insert error:', filePath, err?.message || err);
+      process.send({ type: 'file-error', file: filePath, error: String(err?.message || err) });
     }
     processed++;
     process.send({ type: 'progress', scanned, total, processed });
@@ -319,19 +278,18 @@ async function runFullScan(db, folders, config, supportedFileTypes) {
     for (const filePath of supportedFiles) {
       try {
         const fileHash = await getFileHash(filePath);
-        const trackRow = db.prepare('SELECT Id, FileHash, Duration FROM Track WHERE Uri = ?').get(filePath);
-        if (!trackRow || trackRow.FileHash !== fileHash || trackRow.Duration == null) {
-          const musicInfo = await parseMusicWorker(filePath, config);
-          if (!trackRow) {
-            insertTrack(db, config, filePath, musicInfo, fileHash);
-          } else {
-            updateTrack(db, config, filePath, musicInfo, fileHash, trackRow.Id);
-          }
-          scanned++;
-          folderScanned++;
+        const trackRow = db.prepare('SELECT Id FROM Track WHERE Uri = ?').get(filePath);
+        const musicInfo = await parseMusicWorker(filePath);
+        if (!trackRow) {
+          insertTrack(db, config, filePath, musicInfo, fileHash);
+        } else {
+          updateTrack(db, config, filePath, musicInfo, fileHash, trackRow.Id);
         }
+        scanned++;
+        folderScanned++;
       } catch (err) {
-        console.error('[full-scan] DB Insert/Update Error:', err);
+        console.error('[full-scan] DB Insert/Update Error:', filePath, err?.message || err);
+        process.send({ type: 'file-error', file: filePath, error: String(err?.message || err) });
       }
       processed++;
       process.send({ type: 'progress', scanned, total, processed });
