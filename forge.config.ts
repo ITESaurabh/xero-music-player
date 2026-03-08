@@ -4,6 +4,7 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
@@ -14,7 +15,11 @@ import { rendererConfig } from './webpack.renderer.config';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    icon: './src/assets/logo/XeroTunesLogo',
+    icon: [
+      './src/assets/logo/XeroTunesLogo',
+      './src/assets/logo/XeroTunesLogo.icns',
+      './src/assets/logo/XeroTunesLogo.icon',
+    ],
     executableName: 'xero-music-player',
     asar: true,
     appCategoryType: 'public.app-category.music',
@@ -31,6 +36,33 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     new MakerDeb({ options: { name: 'xero-music-player' } }),
     new MakerRpm({ options: { name: 'xero-music-player' } }),
+    new MakerDMG({
+      name: 'Xero Music Player',
+      background: './src/assets/dmg-bg/background.tiff',
+      // background: path.resolve(__dirname, 'src/assets/dmg-bg/bg.png'),
+      additionalDMGOptions: {
+        window: {
+          size: { width: 480, height: 320 },
+        },
+      },
+      contents(opts) {
+        return [
+          {
+            x: 45,
+            y: 150,
+            path: path.resolve(opts.appPath, '..', `${opts.name}.app`),
+            type: 'file',
+          },
+          {
+            x: 270,
+            y: 70,
+            path: '/Applications',
+            type: 'link',
+          },
+        ];
+      },
+      overwrite: true,
+    }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
