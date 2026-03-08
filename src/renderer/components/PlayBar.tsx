@@ -639,37 +639,37 @@ export default function PlayBar() {
                 gap: '0.625rem',
               }}
             >
-              <motion.div whileTap={{ scale: 0.8 }}>
-                <IconButton
-                  aria-label="previous song"
-                  sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
-                  {...prevButtonEvents}
-                >
-                  <FastRewindRounded fontSize="large" htmlColor={mainIconColor} />
-                </IconButton>
-              </motion.div>
-              <motion.div whileTap={{ scale: 0.8 }}>
-                <IconButton
-                  aria-label={paused ? 'play' : 'pause'}
-                  sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
-                  onClick={() => setPaused(!paused)}
-                >
-                  {paused ? (
-                    <PlayArrowRounded sx={{ fontSize: '3rem' }} htmlColor={mainIconColor} />
-                  ) : (
-                    <PauseRounded sx={{ fontSize: '3rem' }} htmlColor={mainIconColor} />
-                  )}
-                </IconButton>
-              </motion.div>
-              <motion.div whileTap={{ scale: 0.8 }}>
-                <IconButton
-                  aria-label="next song"
-                  sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
-                  {...nextButtonEvents}
-                >
-                  <FastForwardRounded fontSize="large" htmlColor={mainIconColor} />
-                </IconButton>
-              </motion.div>
+              <IconButton
+                component={motion.div}
+                whileTap={{ scale: 0.9 }}
+                aria-label="previous song"
+                sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
+                {...prevButtonEvents}
+              >
+                <FastRewindRounded fontSize="large" htmlColor={mainIconColor} />
+              </IconButton>
+              <IconButton
+                component={motion.div}
+                whileTap={{ scale: 0.9 }}
+                aria-label={paused ? 'play' : 'pause'}
+                sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
+                onClick={() => setPaused(!paused)}
+              >
+                {paused ? (
+                  <PlayArrowRounded sx={{ fontSize: '3rem' }} htmlColor={mainIconColor} />
+                ) : (
+                  <PauseRounded sx={{ fontSize: '3rem' }} htmlColor={mainIconColor} />
+                )}
+              </IconButton>
+              <IconButton
+                component={motion.div}
+                whileTap={{ scale: 0.9 }}
+                aria-label="next song"
+                sx={{ backgroundColor: isDark ? 'black' : '#d9d9d9' }}
+                {...nextButtonEvents}
+              >
+                <FastForwardRounded fontSize="large" htmlColor={mainIconColor} />
+              </IconButton>
             </Box>
             <Stack
               spacing={2}
