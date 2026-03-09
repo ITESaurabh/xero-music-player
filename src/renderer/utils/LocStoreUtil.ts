@@ -54,3 +54,12 @@ export function getOverlayEnabled(): boolean {
 export function setOverlayEnabled(enabled: boolean): void {
   localStorage.setItem('overlay_enabled', String(enabled));
 }
+
+export function getDiscordEnabled(): boolean {
+  const val = localStorage.getItem('discord_presence_enabled');
+  return val === 'true';
+}
+
+export function setDiscordEnabled(enabled: boolean): void {
+  localStorage.setItem('discord_presence_enabled', String(enabled));
+}

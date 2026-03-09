@@ -1,6 +1,12 @@
-import { BrowserWindow, dialog, ipcMain, nativeTheme, screen, shell } from 'electron';
+import { BrowserWindow, dialog, ipcMain, nativeTheme, screen } from 'electron';
 import { prevIcon, nextIcon, playIcon, pauseIcon } from '../thumbarIcons';
 import dbModule from '../../database';
+import {
+  setPresenceEnabled,
+  updatePresence,
+  clearPresence,
+  destroyPresence,
+} from '../modules/DiscordPresence';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = dbModule;
 import path from 'path';
@@ -58,6 +64,7 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   overlayWin = createOverlayWin();
 
   mainWin.on('close', () => {
+    destroyPresence();
     if (overlayWin && !overlayWin.isDestroyed()) overlayWin.destroy();
   });
 
@@ -863,5 +870,31 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
       activeScanWorker = null;
       sendMessageToRendererProcess(mainWin, 'scan-end', null);
     });
+  });
+
+  // ── Discord Rich Presence IPC ─────────────────────────────────────────────
+  ipcMain.on(
+    'discord-update',
+    (
+      _,
+      data: {
+        title: string;
+        artist: string;
+        album: string;
+        isPlaying: boolean;
+        position: number;
+        duration: number;
+      }
+    ) => {
+      updatePresence(data);
+    }
+  );
+
+  ipcMain.on('discord-clear', () => {
+    clearPresence();
+  });
+
+  ipcMain.on('discord-set-enabled', (_, { enabled }: { enabled: boolean }) => {
+    setPresenceEnabled(enabled);
   });
 }

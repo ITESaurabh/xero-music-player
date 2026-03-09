@@ -18,7 +18,13 @@ import ShuffleOnRoundedIcon from '@mui/icons-material/ShuffleOnRounded';
 import RepeatOneOnRoundedIcon from '@mui/icons-material/RepeatOneOnRounded';
 import RepeatOnRoundedIcon from '@mui/icons-material/RepeatOnRounded';
 import { store, RepeatMode } from '../utils/store';
-import { getVolumeLevel, setVolumeLevel, getOverlayEnabled } from '../utils/LocStoreUtil';
+import {
+  getVolumeLevel,
+  setVolumeLevel,
+  getOverlayEnabled,
+  getDiscordEnabled,
+  setDiscordEnabled,
+} from '../utils/LocStoreUtil';
 import speaker132Regular from '@iconify/icons-fluent/speaker-1-32-regular';
 import speaker232Regular from '@iconify/icons-fluent/speaker-2-32-regular';
 import speakerMute32Filled from '@iconify/icons-fluent/speaker-mute-32-filled';
@@ -73,6 +79,17 @@ export default function PlayBar() {
   const isPhone = useMediaQuery(({ breakpoints }) => breakpoints.down('md'));
   const [volume, setVolume] = useState(defaultVol);
   const [lastVolume, setLastVolume] = useState(defaultVol > 0 ? defaultVol : 30);
+  const [discordEnabled, setDiscordEnabledState] = useState(() => getDiscordEnabled());
+
+  const handleDiscordToggle = () => {
+    const next = !discordEnabled;
+    setDiscordEnabledState(next);
+    setDiscordEnabled(next);
+    ipcRenderer.send('discord-set-enabled', { enabled: next });
+    if (!next) {
+      ipcRenderer.send('discord-clear');
+    }
+  };
 
   useEffect(() => {
     // Only set songPath and paused if queue is ready and track is valid
@@ -383,6 +400,34 @@ export default function PlayBar() {
   }, [dispatch, duration]);
   // --- End Media Session API ---
 
+  // ── Discord Rich Presence sync ───────────────────────────────────────
+  // Bootstrap enabled state into main process on mount
+  useEffect(() => {
+    ipcRenderer.send('discord-set-enabled', { enabled: discordEnabled });
+  }, []);
+
+  const sendDiscordUpdate = (pos: number) => {
+    if (!discordEnabled) return;
+    if (!state.track?.Id) {
+      ipcRenderer.send('discord-clear');
+      return;
+    }
+    ipcRenderer.send('discord-update', {
+      title: (state.track.Title as string) || 'Unknown Track',
+      artist: (state.track.ArtistName as string) || '',
+      album: (state.track.AlbumTitle as string) || '',
+      isPlaying: !paused,
+      position: pos,
+      duration,
+    });
+  };
+
+  // Update presence on track change, play/pause toggle, or enable/disable
+  useEffect(() => {
+    sendDiscordUpdate(position);
+  }, [state.track?.Id, paused, discordEnabled]);
+  // ── End Discord Rich Presence sync ──────────────────────────────────
+
   // ── Thumbnail toolbar sync ──────────────────────────────────────────
   // Notify main process whenever play/pause changes so it can flip the icon
   useEffect(() => {
@@ -583,9 +628,10 @@ export default function PlayBar() {
               max={duration}
               onChange={(_, value) => setPosition(Array.isArray(value) ? value[0] : value)}
               onChangeCommitted={(_, value) => {
-                if (audioRef.current)
-                  audioRef.current.currentTime = Array.isArray(value) ? value[0] : value;
+                const seekPos = Array.isArray(value) ? value[0] : value;
+                if (audioRef.current) audioRef.current.currentTime = seekPos;
                 setIsSeeking(false);
+                sendDiscordUpdate(seekPos);
               }}
               onMouseDown={() => setIsSeeking(true)}
               onMouseUp={() => setIsSeeking(false)}
@@ -746,7 +792,12 @@ export default function PlayBar() {
                 <RepeatOneOnRoundedIcon />
               )}
             </IconButton>
-            <IconButton onClick={() => null} aria-label="discord visibility">
+            <IconButton
+              onClick={handleDiscordToggle}
+              aria-label="discord presence"
+              title={discordEnabled ? 'Discord Presence: On' : 'Discord Presence: Off'}
+              sx={{ opacity: discordEnabled ? 1 : 0.35 }}
+            >
               <DiscordIcon viewBox="0 0 70 60" width={25} height={25} />
             </IconButton>
           </Box>
