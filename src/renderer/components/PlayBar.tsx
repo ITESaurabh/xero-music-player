@@ -311,12 +311,33 @@ export default function PlayBar() {
   // Update OS metadata (Now Playing, lock screen, taskbar) when track changes
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: (state.track?.Title as string) || 'Unknown Title',
-      artist: (state.track?.ArtistName as string) || 'Unknown Artist',
-      album: (state.track?.AlbumTitle as string) || 'Unknown Album',
-      artwork: albumArtSrc ? [{ src: albumArtSrc }] : [],
-    });
+
+    const updateMediaSession = async () => {
+      let artwork: MediaImage[] = [];
+      if (state.track?.AlbumArt) {
+        try {
+          const fileUrl = `file:///${(state.track.AlbumArt as string).replace(/\\/g, '/')}`;
+          const response = await fetch(fileUrl);
+          const blob = await response.blob();
+          const base64 = await new Promise<string>(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          artwork = [{ src: base64 }];
+        } catch {
+          // artwork stays empty if loading fails
+        }
+      }
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: (state.track?.Title as string) || 'Unknown Title',
+        artist: (state.track?.ArtistName as string) || 'Unknown Artist',
+        album: (state.track?.AlbumTitle as string) || 'Unknown Album',
+        artwork,
+      });
+    };
+
+    updateMediaSession();
   }, [state.track]);
 
   // Sync OS playback state with local paused state
