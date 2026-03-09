@@ -15,11 +15,15 @@ import { rendererConfig } from './webpack.renderer.config';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    icon: [
-      './src/assets/logo/XeroTunesLogo',
-      './src/assets/logo/XeroTunesLogo.icns',
-      './src/assets/logo/XeroTunesLogo.icon',
-    ],
+    icon:
+      process.platform === 'darwin'
+        ? [
+            './src/assets/logo/XeroTunesLogo',
+            './src/assets/logo/XeroTunesLogo.icns',
+            './src/assets/logo/XeroTunesLogo.icon',
+          ]
+        : './src/assets/logo/XeroTunesLogo',
+
     executableName: 'xero-music-player',
     asar: true,
     appCategoryType: 'public.app-category.music',
