@@ -3945,6 +3945,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"clrc@npm:^3.1.4":
+  version: 3.1.4
+  resolution: "clrc@npm:3.1.4"
+  checksum: 10c0/332d9f79249e69b771160e6f3dab3bb5ddd9560b60bd3d42408aeea7f525ed7c42b433b0e6decc60676c9c3c8ebe7f6a07bfbb5bb417ed468e7b419d29eca6b7
+  languageName: node
+  linkType: hard
+
 "clsx@npm:^2.1.0, clsx@npm:^2.1.1":
   version: 2.1.1
   resolution: "clsx@npm:2.1.1"
@@ -9203,6 +9210,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-lrc@npm:^3.2.1":
+  version: 3.2.1
+  resolution: "react-lrc@npm:3.2.1"
+  dependencies:
+    clrc: "npm:^3.1.4"
+    resize-observer-polyfill: "npm:^1.5.1"
+  peerDependencies:
+    react: ">=17.0.0"
+    react-dom: ">=17.0.0"
+  checksum: 10c0/52739a33e01413d313ce6e0dff9b2418b2cc0e3ce13591ae4cb239800d523b2f1cceb0a163656ca9a2a338d9778ce4b2b9ecb63db41fd9b67b2b6cfc44da71ee
+  languageName: node
+  linkType: hard
+
 "react-router@npm:^7.13.1":
   version: 7.13.1
   resolution: "react-router@npm:7.13.1"
@@ -9431,6 +9451,13 @@ __metadata:
   dependencies:
     pe-library: "npm:^1.0.1"
   checksum: 10c0/d9ec8fc3900f3bf8fe818260149fdd6180b45d42f08d8bdf098a7a841d995363f44fd2d633948889e300a3ad8e7860b2d92fff9afcdcea21999994f5f526ffb0
+  languageName: node
+  linkType: hard
+
+"resize-observer-polyfill@npm:^1.5.1":
+  version: 1.5.1
+  resolution: "resize-observer-polyfill@npm:1.5.1"
+  checksum: 10c0/5e882475067f0b97dc07e0f37c3e335ac5bc3520d463f777cec7e894bb273eddbfecb857ae668e6fb6881fd6f6bb7148246967172139302da50fa12ea3a15d95
   languageName: node
   linkType: hard
 
@@ -11632,6 +11659,7 @@ __metadata:
     react: "npm:^19.2.4"
     react-dom: "npm:^19.2.4"
     react-fast-marquee: "npm:^1.6.5"
+    react-lrc: "npm:^3.2.1"
     react-router: "npm:^7.13.1"
     react-virtualized-auto-sizer: "npm:^1.0.26"
     react-window: "npm:^1.8.11"

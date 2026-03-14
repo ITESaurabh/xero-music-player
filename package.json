@@ -85,6 +85,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-fast-marquee": "^1.6.5",
+    "react-lrc": "^3.2.1",
     "react-router": "^7.13.1",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^1.8.11"

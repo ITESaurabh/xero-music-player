@@ -41,6 +41,7 @@ export interface AppState {
   repeatMode: RepeatMode;
   isShuffle: boolean;
   isPlayerBarVisible: boolean;
+  isLyricsExpanded: boolean;
   isScanningLibrary: boolean;
   scanProgress: ScanProgress | null;
   libraryStats: LibraryStats | null;
@@ -61,6 +62,7 @@ export type AppAction =
   | { type: 'PREV_TRACK' }
   | { type: 'SET_REPEAT_MODE'; payload: RepeatMode }
   | { type: 'SET_PLAYER_BAR_VISIBLE'; payload: boolean }
+  | { type: 'SET_LYRICS_EXPANDED'; payload: boolean }
   | { type: 'SET_SHUFFLE'; payload: boolean }
   | { type: 'SET_SCANNING'; payload: boolean }
   | { type: 'SET_SCAN_PROGRESS'; payload: ScanProgress }
@@ -90,6 +92,7 @@ const initialState: AppState = (() => {
     repeatMode: 'off',
     isShuffle: false,
     isPlayerBarVisible: true,
+    isLyricsExpanded: false,
     isScanningLibrary: false,
     scanProgress: null,
     libraryStats: null,
@@ -175,6 +178,9 @@ function reducer(state: AppState, action: AppAction): AppState {
     }
     case 'SET_PLAYER_BAR_VISIBLE': {
       return { ...state, isPlayerBarVisible: action.payload };
+    }
+    case 'SET_LYRICS_EXPANDED': {
+      return { ...state, isLyricsExpanded: action.payload };
     }
     case 'SET_SCANNING': {
       return { ...state, isScanningLibrary: action.payload, scanProgress: action.payload ? state.scanProgress : null };

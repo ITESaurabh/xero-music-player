@@ -10,9 +10,11 @@ import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
 import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import { Icon } from '@iconify/react';
-import { Card, Link, useMediaQuery } from '@mui/material';
+import { Card, Collapse, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import DiscordIcon from 'svg-react-loader?name=DiscordIcon!../../img/discord-logo.svg';
+import LyricNoteIcon from 'svg-react-loader?name=LyricNoteIcon!../../assets/svgs/lyric-note.svg';
+import LyricNoteActiveIcon from 'svg-react-loader?name=LyricNoteActiveIcon!../../assets/svgs/lyric-note-active.svg';
 import { RepeatRounded, ShuffleRounded } from '@mui/icons-material';
 import ShuffleOnRoundedIcon from '@mui/icons-material/ShuffleOnRounded';
 import RepeatOneOnRoundedIcon from '@mui/icons-material/RepeatOneOnRounded';
@@ -34,6 +36,7 @@ const { ipcRenderer } = window.require('electron');
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { parseFile } from 'music-metadata';
+import { Lrc } from 'react-lrc';
 
 const CoverImage = styled(Box)(({ theme }) => ({
   width: 140,
@@ -80,6 +83,136 @@ export default function PlayBar() {
   const [volume, setVolume] = useState(defaultVol);
   const [lastVolume, setLastVolume] = useState(defaultVol > 0 ? defaultVol : 30);
   const [discordEnabled, setDiscordEnabledState] = useState(() => getDiscordEnabled());
+
+  // ── Lyrics ───────────────────────────────────────────────────────────────
+  const isLyricsExpanded = state.isLyricsExpanded;
+  const [lrcContent, setLrcContent] = useState<string | null>(null);
+  const [lyricsSource, setLyricsSource] = useState<'LRC file' | 'Embedded' | null>(null);
+  const [lyricsType, setLyricsType] = useState<'synced' | 'unsynced' | null>(null);
+
+  function syltToLrc(synchronisedText: Array<{ text: string; timestamp: number }>): string {
+    return synchronisedText
+      .map(({ text, timestamp }) => {
+        const mins = Math.floor(timestamp / 60000);
+        const secs = Math.floor((timestamp % 60000) / 1000);
+        const centis = Math.floor((timestamp % 1000) / 10);
+        return `[${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(centis).padStart(2, '0')}]${text}`;
+      })
+      .join('\n');
+  }
+
+  useEffect(() => {
+    if (!songPath) {
+      setLrcContent(null);
+      setLyricsSource(null);
+      setLyricsType(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const fs = window.require('fs') as typeof import('fs');
+      const nodePath = window.require('path') as typeof import('path');
+
+      // 1. Try sidecar .lrc file — determine synced vs unsynced by content
+      const dir = nodePath.dirname(songPath);
+      const base = nodePath.basename(songPath, nodePath.extname(songPath));
+      const lrcPath = nodePath.join(dir, `${base}.lrc`);
+      if (fs.existsSync(lrcPath)) {
+        try {
+          const content = fs.readFileSync(lrcPath, 'utf8');
+          const isSynced = /\[\d{2}:\d{2}[.:]\d{2}/.test(content);
+          if (!cancelled) {
+            setLrcContent(content);
+            setLyricsSource('LRC file');
+            setLyricsType(isSynced ? 'synced' : 'unsynced');
+          }
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
+
+      // 2. Try embedded tags via music-metadata
+      try {
+        const metadata = await parseFile(songPath, { skipCovers: true });
+        const nativeFrames = [
+          ...(metadata.native['ID3v2.3'] ?? []),
+          ...(metadata.native['ID3v2.4'] ?? []),
+        ];
+
+        // SYLT — synchronized lyrics
+        const sylt = nativeFrames.find(f => f.id === 'SYLT');
+        const syltVal = sylt?.value as
+          | { synchronisedText?: Array<{ text: string; timestamp: number }> }
+          | undefined;
+        if (syltVal?.synchronisedText?.length) {
+          const lrc = syltToLrc(syltVal.synchronisedText);
+          if (!cancelled) {
+            setLrcContent(lrc);
+            setLyricsSource('Embedded');
+            setLyricsType('synced');
+          }
+          return;
+        }
+
+        // USLT — check if already in LRC format (synced) or plain text (unsynced)
+        const uslt = nativeFrames.find(f => f.id === 'USLT');
+        const usltVal = uslt?.value as { text?: string } | undefined;
+        if (usltVal?.text) {
+          const text: string = usltVal.text;
+          if (/\[\d{2}:\d{2}[.:]\d{2}/.test(text)) {
+            if (!cancelled) {
+              setLrcContent(text);
+              setLyricsSource('Embedded');
+              setLyricsType('synced');
+            }
+          } else {
+            if (!cancelled) {
+              setLrcContent(text);
+              setLyricsSource('Embedded');
+              setLyricsType('unsynced');
+            }
+          }
+          return;
+        }
+
+        // common.lyrics fallback (plain text)
+        const commonLyrics = (metadata.common as unknown as Record<string, unknown>).lyrics;
+        const lyricText = Array.isArray(commonLyrics)
+          ? (commonLyrics as Array<{ text?: string } | string>)
+              .map(l => (typeof l === 'string' ? l : (l?.text ?? '')))
+              .filter(Boolean)
+              .join('\n')
+          : typeof commonLyrics === 'string'
+            ? commonLyrics
+            : null;
+        if (lyricText) {
+          if (!cancelled) {
+            setLrcContent(lyricText);
+            setLyricsSource('Embedded');
+            setLyricsType('unsynced');
+          }
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+
+      if (!cancelled) {
+        setLrcContent(null);
+        setLyricsSource(null);
+        setLyricsType(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [songPath]);
+
+  const handleLyricsToggle = () => {
+    dispatch({ type: 'SET_LYRICS_EXPANDED', payload: !isLyricsExpanded });
+  };
+  // ── End Lyrics ───────────────────────────────────────────────────────────
 
   const handleDiscordToggle = () => {
     const next = !discordEnabled;
@@ -568,8 +701,133 @@ export default function PlayBar() {
   if (!state?.track) {
     return null;
   }
+
+  // ── Unsynced lyrics: split into displayable lines
+  const unsyncedLines = lyricsType === 'unsynced' && lrcContent ? lrcContent.split('\n') : [];
+
+  const lyricsPanel = (
+    <Box
+      sx={{
+        bottom: '100%',
+        width: '100%',
+        height: 'calc(100vh - 250px)',
+        borderRadius: '0.5rem 0.5rem 0 0',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Source label — top right */}
+      {lyricsSource && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 10,
+            right: 14,
+            zIndex: 1,
+            backgroundColor:
+              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+            borderRadius: '6px',
+            px: 1.2,
+            py: 0.3,
+            pointerEvents: 'none',
+          }}
+        >
+          <Typography sx={{ fontSize: '0.7rem', opacity: 0.55, letterSpacing: 0.3 }}>
+            Source: {lyricsSource}
+          </Typography>
+        </Box>
+      )}
+
+      {/* ── SYNCED lyrics ────────────────────────────────────────── */}
+      {lyricsType === 'synced' && lrcContent && (
+        <Lrc
+          lrc={lrcContent}
+          currentMillisecond={position * 1000}
+          verticalSpace
+          style={{ flex: 1, overflow: 'hidden auto', paddingBottom: '60px', width: '100%' }}
+          lineRenderer={({ active, line }) => (
+            <Box
+              key={line.id}
+              onClick={() => {
+                if (audioRef.current) {
+                  audioRef.current.currentTime = line.startMillisecond / 1000;
+                  setPosition(line.startMillisecond / 1000);
+                }
+              }}
+              sx={{
+                textAlign: 'center',
+                py: '5px',
+                px: 3,
+                cursor: 'pointer',
+                userSelect: 'none',
+                fontSize: active ? '1.35rem' : '1rem',
+                fontWeight: active ? 700 : 400,
+                lineHeight: active ? 1.6 : 1.5,
+                color: active
+                  ? theme.palette.text.primary
+                  : theme.palette.mode === 'dark'
+                    ? 'rgba(255,255,255,0.28)'
+                    : 'rgba(0,0,0,0.28)',
+                transform: active ? 'scale(1.03)' : 'scale(1)',
+                transition: 'all 0.22s ease',
+                '&:hover': {
+                  color:
+                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                },
+              }}
+            >
+              {line.content || '\u00A0'}
+            </Box>
+          )}
+        />
+      )}
+
+      {/* ── UNSYNCED lyrics ──────────────────────────────────────── */}
+      {lyricsType === 'unsynced' && (
+        <Box sx={{ flex: 1, overflow: 'hidden auto', px: 4, pt: 3, pb: '60px' }}>
+          {unsyncedLines.map((line, i) => (
+            <Typography
+              key={i}
+              sx={{
+                fontSize: '1rem',
+                lineHeight: 1.85,
+                color: theme.palette.text.primary,
+                opacity: line.trim() === '' ? 0 : 0.82,
+                minHeight: line.trim() === '' ? '0.8rem' : undefined,
+              }}
+            >
+              {line || '\u00A0'}
+            </Typography>
+          ))}
+        </Box>
+      )}
+
+      {/* ── No lyrics ────────────────────────────────────────────── */}
+      {!lrcContent && (
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            opacity: 0.35,
+          }}
+        >
+          <Typography variant="body1" fontWeight={500}>
+            No lyrics found
+          </Typography>
+          <Typography variant="caption">Try adding a .lrc file next to the track</Typography>
+        </Box>
+      )}
+    </Box>
+  );
+
   return (
-    <Box sx={{ px: isPhone ? 0 : '1.5rem', flex: 1 }}>
+    <Box sx={{ px: isPhone ? 0 : '1.5rem', flex: 1, position: 'relative' }}>
+      {/* ── Player controls card ────────────────────────────────────── */}
       <Grid
         container
         sx={{
@@ -581,6 +839,14 @@ export default function PlayBar() {
         elevation={3}
         component={Card}
       >
+        <Collapse
+          in={isLyricsExpanded}
+          sx={{
+            width: '100%',
+          }}
+        >
+          {lyricsPanel}
+        </Collapse>
         <Grid xs={12} md={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
             <CoverImage>
@@ -819,7 +1085,25 @@ export default function PlayBar() {
               title={discordEnabled ? 'Discord Presence: On' : 'Discord Presence: Off'}
               sx={{ opacity: discordEnabled ? 1 : 0.35 }}
             >
-              <DiscordIcon viewBox="0 0 70 60" width={25} height={25} />
+              <DiscordIcon viewBox="0 0 70 60" width={24} height={24} />
+            </IconButton>
+            <IconButton
+              onClick={handleLyricsToggle}
+              aria-label="lyrics"
+              disabled={!lrcContent}
+              title={isLyricsExpanded ? 'Close Lyrics' : 'Show Lyrics'}
+              sx={{ opacity: lrcContent ? 1 : 0.5 }}
+            >
+              {isLyricsExpanded ? (
+                <LyricNoteActiveIcon
+                  viewBox="0 0 16 17"
+                  className="icon-white"
+                  width={24}
+                  height={24}
+                />
+              ) : (
+                <LyricNoteIcon viewBox="0 0 16 17" className="icon-white" width={24} height={24} />
+              )}
             </IconButton>
           </Box>
         </Grid>

@@ -250,3 +250,7 @@ nav .control-window {
   -o-user-drag: none;
   user-drag: none;
 }
+
+.icon-white > path {
+  fill: white !important;
+}
