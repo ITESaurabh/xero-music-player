@@ -5,14 +5,8 @@ import {
   Box,
   Grid,
   LinearProgress,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router';
-import edit24Regular from '@iconify/icons-fluent/edit-24-regular';
-import { Icon } from '@iconify/react';
 import PageToolbar from '../components/PageToolbar';
 import Empty from '../components/Empty';
 import ArtistCell from '../components/ArtistCell';
@@ -22,6 +16,7 @@ import LibraryTable, {
   type LibraryTableHandle,
 } from '../components/LibraryTable';
 import SelectionBar, { toEditableTracks, useTrackSelection } from '../components/SelectionBar';
+import { useTrackMenu } from '../components/TrackContextMenu';
 import { useIpc } from '../state/ipc';
 import { store, Track } from '../utils/store';
 import { QUERY_KEYS } from '../constants/queryKeys';
@@ -30,8 +25,6 @@ import { motion } from 'motion/react';
 import { useScrollHidePlayerBar } from '../utils/useScrollHidePlayerBar';
 import { useScrollRestoration } from '../utils/useScrollRestoration';
 import TagEditorDialog, { EditableTrack } from '../components/TagEditorDialog';
-import DownloadMenuItem from '../components/DownloadMenuItem';
-import { isTaggable } from '../../config/constants';
 import { formatDuration } from '../utils/formatDuration';
 
 const columns: TableColumn<Track>[] = [
@@ -98,9 +91,7 @@ const AllSongs: React.FC = () => {
   const location = useLocation();
   const listRef = React.useRef<LibraryTableHandle | null>(null);
   const [editTracks, setEditTracks] = React.useState<EditableTrack[] | null>(null);
-  const [rowMenu, setRowMenu] = React.useState<{ top: number; left: number; song: Track } | null>(
-    null
-  );
+  const { openTrackMenu, trackMenu } = useTrackMenu();
 
   const {
     data: allSongs = [] as Track[],
@@ -210,7 +201,7 @@ const AllSongs: React.FC = () => {
           view={view}
           isRowActive={song => song.Id === state.track?.Id}
           onRowClick={handleSongClick}
-          onRowContextMenu={(song, e) => setRowMenu({ top: e.clientY, left: e.clientX, song })}
+          onRowContextMenu={(song, e) => openTrackMenu(e, song)}
           selection={{ selectedIds, onReplace: replace }}
           listRef={listRef}
           initialScrollOffset={initialScrollOffset}
@@ -219,34 +210,7 @@ const AllSongs: React.FC = () => {
         />
       </Container>
 
-      <Menu
-        open={rowMenu !== null}
-        onClose={() => setRowMenu(null)}
-        anchorReference="anchorPosition"
-        anchorPosition={rowMenu ? { top: rowMenu.top, left: rowMenu.left } : undefined}
-      >
-        <MenuItem
-          disabled={typeof rowMenu?.song.Uri !== 'string' || !isTaggable(rowMenu.song.Uri)}
-          onClick={() => {
-            if (rowMenu) {
-              setEditTracks([
-                {
-                  Id: rowMenu.song.Id as number | string,
-                  Uri: rowMenu.song.Uri as string,
-                  Title: rowMenu.song.Title as string,
-                },
-              ]);
-            }
-            setRowMenu(null);
-          }}
-        >
-          <ListItemIcon>
-            <Icon icon={edit24Regular} width={20} />
-          </ListItemIcon>
-          <ListItemText>Edit tags</ListItemText>
-        </MenuItem>
-        <DownloadMenuItem song={rowMenu?.song} onDone={() => setRowMenu(null)} />
-      </Menu>
+      {trackMenu}
 
       {editTracks && (
         <TagEditorDialog

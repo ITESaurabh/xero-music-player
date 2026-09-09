@@ -662,6 +662,12 @@ export default function PlayBar() {
     pausedRef.current = paused;
   }, [paused]);
 
+  // The bar owns the real transport state; views only write `isPlaying` when they
+  // start something, so without this mirror it goes stale on the first pause.
+  useEffect(() => {
+    dispatch({ type: 'SET_IS_PLAYING', payload: !paused });
+  }, [paused, dispatch]);
+
   // ── SMTC keepalive (silent loop) ─────────────────────────────────────
   // 1s silent WAV looped in a hidden audio element. While it's playing,
   // MediaSession always has at least one active player, so the session

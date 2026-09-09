@@ -143,6 +143,7 @@ export type AppAction =
   | { type: 'SET_PATH'; payload: string | null }
   | { type: 'SET_CURR_TRACK'; payload: Track }
   | { type: 'REFRESH_QUEUE_TRACKS'; payload: Track[] }
+  | { type: 'ENQUEUE'; payload: { tracks: Track[]; next?: boolean } }
   | { type: 'SET_IS_PLAYING'; payload: boolean }
   | { type: 'SET_PROGRESS'; payload: number }
   | { type: 'CHANGE_TRACK' }
@@ -300,7 +301,16 @@ function reducer(state: AppState, action: AppAction): AppState {
       setQueueState(queue, state.queueIndex, track, state.queueSource);
       return { ...state, queue, track };
     }
+    case 'ENQUEUE': {
+      const items = toQueueTracks(action.payload.tracks);
+      if (!items.length) return state;
+      const at = action.payload.next ? state.queueIndex + 1 : state.queue.length;
+      const queue = [...state.queue.slice(0, at), ...items, ...state.queue.slice(at)];
+      setQueueState(queue, state.queueIndex, state.track, state.queueSource);
+      return { ...state, queue, originalOrder: [...state.originalOrder, ...items.map(t => t.Id)] };
+    }
     case 'SET_IS_PLAYING': {
+      if (state.isPlaying === action.payload) return state;
       return { ...state, isPlaying: action.payload };
     }
     case 'SET_PROGRESS': {

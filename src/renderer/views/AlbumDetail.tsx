@@ -2,19 +2,13 @@ import React, { useContext, useEffect, useCallback, useState } from 'react';
 import {
   alpha,
   Box,
-  Checkbox,
   Collapse,
   Typography,
   LinearProgress,
-  ListItemButton,
   useMediaQuery,
   useTheme,
   Theme,
   Button,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
 } from '@mui/material';
 import { useParams, useLocation, useNavigate } from 'react-router';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
@@ -31,11 +25,11 @@ import edit24Regular from '@iconify/icons-fluent/edit-24-regular';
 import ImagePreviewDialog from '../components/ImagePreviewDialog';
 import TagEditorDialog, { EditableTrack } from '../components/TagEditorDialog';
 import SelectionBar, { toEditableTracks, useTrackSelection } from '../components/SelectionBar';
-import DownloadMenuItem from '../components/DownloadMenuItem';
-import ArtistCell from '../components/ArtistCell';
-import { detailBannerBg, listRowSx } from '../styles/listSx';
+import { detailBannerBg } from '../styles/listSx';
 import { DEFAULT_AA, isTaggable } from '../../config/constants';
-import EqualizerBars from '../components/EqualizerBars';
+import ArtistCell from '../components/ArtistCell';
+import TrackRow, { TRACK_ROW_H } from '../components/TrackRow';
+import { useTrackMenu } from '../components/TrackContextMenu';
 
 interface AlbumSong extends Track {
   TrackNumber?: string | number;
@@ -45,13 +39,6 @@ interface AlbumSong extends Track {
   AlbumCoverUri?: string;
   GenreName?: string;
   Duration?: number;
-}
-
-function formatDuration(seconds: number | null | undefined): string {
-  if (!seconds) return '--:--';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function totalDuration(songs: AlbumSong[]): string {
@@ -150,9 +137,7 @@ const AlbumDetail: React.FC = () => {
   const [editor, setEditor] = useState<{ mode: 'track' | 'album'; tracks: EditableTrack[] } | null>(
     null
   );
-  const [rowMenu, setRowMenu] = useState<{ top: number; left: number; song: AlbumSong } | null>(
-    null
-  );
+  const { openTrackMenu, trackMenu } = useTrackMenu();
 
   const toEditable = (list: AlbumSong[]): EditableTrack[] =>
     list
@@ -196,7 +181,7 @@ const AlbumDetail: React.FC = () => {
     titleSizeVal,
   ]);
 
-  const ROW_HEIGHT = 60;
+  const ROW_HEIGHT = TRACK_ROW_H;
   const scrollHide = useScrollHidePlayerBar();
   const handleScroll = React.useCallback(
     (args: { scrollOffset: number }) => {
@@ -211,92 +196,23 @@ const AlbumDetail: React.FC = () => {
   const Row = useCallback(
     ({ index, style }: ListChildComponentProps) => {
       const song = songs[index] as AlbumSong;
-      const isActive = song.Id === state.track?.Id;
-      const isSelected = song.Id != null && selectedIds.has(song.Id);
-
       return (
-        <ListItemButton
-          style={style}
-          selected={isActive || isSelected}
-          onClick={e => {
-            if ((e.target as HTMLElement).closest('[data-nav-cell]')) return;
-            handlePlayAll(index);
-          }}
-          onContextMenu={e => {
-            e.preventDefault();
-            setRowMenu({ top: e.clientY, left: e.clientX, song });
-          }}
-          sx={{ gap: 2, px: 2, ...listRowSx(index), '&:hover .rowCheck': { opacity: 1 } }}
-        >
-          <Box
-            className="rowCheck"
-            data-nav-cell="true"
-            onClick={e => {
-              e.stopPropagation();
-              toggleAt(index, e.shiftKey);
-            }}
-            sx={{
-              display: 'flex',
-              flexShrink: 0,
-              opacity: selectedIds.size > 0 ? 1 : 0,
-              transition: 'opacity 120ms',
-            }}
-          >
-            <Checkbox size="small" checked={isSelected} tabIndex={-1} sx={{ p: 0.25 }} />
-          </Box>
-          {isActive ? (
-            <Box
-              sx={{
-                minWidth: 24,
-                display: 'flex',
-                justifyContent: 'flex-end',
-                flexShrink: 0,
-                color: 'primary.main',
-              }}
-            >
-              <EqualizerBars playing={state.isPlaying} height={12} barWidth={2} barCount={3} />
-            </Box>
-          ) : (
-            <Typography
-              variant="caption"
-              sx={{ minWidth: 24, textAlign: 'right', color: 'text.disabled', flexShrink: 0 }}
-            >
-              {formatTrackNumber(song.TrackNumber) !== null
-                ? formatTrackNumber(song.TrackNumber)
-                : index + 1}
-            </Typography>
-          )}
-
-          {/* Title + Artist */}
-          <Box sx={{ flex: 1, minWidth: 0, gap: 0, display: 'flex', flexDirection: 'column' }}>
-            <Typography
-              variant="body2"
-              noWrap
-              sx={{
-                fontWeight: isActive ? 700 : 400,
-                color: isActive ? 'primary.main' : 'text.primary',
-              }}
-            >
-              {(song.Title as string) || 'Unknown'}
-            </Typography>
-            {!isPhone && (
-              <Box sx={{ color: 'text.secondary' }}>
-                <ArtistCell
-                  artistNameRaw={song.ArtistName as string | undefined}
-                  variant="caption"
-                />
-              </Box>
-            )}
-          </Box>
-
-          {/* Duration */}
-          <Typography
-            variant="caption"
-            sx={{ color: 'text.secondary', flexShrink: 0, minWidth: 36, textAlign: 'right' }}
-          >
-            {formatDuration(song.Duration)}
-          </Typography>
-        </ListItemButton>
+        <div style={style}>
+          <TrackRow
+            song={song}
+            index={index}
+            height={ROW_HEIGHT}
+            number={formatTrackNumber(song.TrackNumber) ?? index + 1}
+            compact={isPhone}
+            isSelected={song.Id != null && selectedIds.has(song.Id)}
+            isCurrent={song.Id === state.track?.Id}
+            isPlaying={state.isPlaying}
+            anySelected={selectedIds.size > 0}
+            onPlay={handlePlayAll}
+            onToggle={toggleAt}
+            onContextMenu={openTrackMenu}
+          />
+        </div>
       );
     },
     [songs, state.track?.Id, state.isPlaying, isPhone, handlePlayAll, selectedIds, toggleAt]
@@ -485,26 +401,7 @@ const AlbumDetail: React.FC = () => {
         imageAlt={albumTitle}
       />
 
-      <Menu
-        open={rowMenu !== null}
-        onClose={() => setRowMenu(null)}
-        anchorReference="anchorPosition"
-        anchorPosition={rowMenu ? { top: rowMenu.top, left: rowMenu.left } : undefined}
-      >
-        <MenuItem
-          disabled={typeof rowMenu?.song.Uri !== 'string' || !isTaggable(rowMenu.song.Uri)}
-          onClick={() => {
-            if (rowMenu) setEditor({ mode: 'track', tracks: toEditable([rowMenu.song]) });
-            setRowMenu(null);
-          }}
-        >
-          <ListItemIcon>
-            <Icon icon={edit24Regular} width={20} />
-          </ListItemIcon>
-          <ListItemText>Edit tags</ListItemText>
-        </MenuItem>
-        <DownloadMenuItem song={rowMenu?.song} onDone={() => setRowMenu(null)} />
-      </Menu>
+      {trackMenu}
 
       {editor && (
         <TagEditorDialog

@@ -1,5 +1,15 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Box, Button, Checkbox, Menu, MenuItem, Snackbar, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  Menu,
+  MenuItem,
+  Snackbar,
+  Typography,
+} from '@mui/material';
 import { Icon } from '@iconify/react';
 import playIcon from '@iconify/icons-fluent/play-24-filled';
 import addIcon from '@iconify/icons-fluent/text-bullet-list-add-24-regular';
@@ -9,6 +19,7 @@ import { useIpc } from '../state/ipc';
 import { QUERY_KEYS } from '../constants/queryKeys';
 import { Track } from '../utils/store';
 import { isTaggable } from '../../config/constants';
+import { useNewPlaylist } from './NewPlaylistItem';
 
 /**
  * Checkbox selection over an ordered track list. Shift extends from the last
@@ -110,6 +121,15 @@ export default function SelectionBar({
 
   const taggable = selected.filter(t => isTaggable(t.Uri as string));
 
+  const { newPlaylistItem, newPlaylistDialog } = useNewPlaylist(
+    useCallback(
+      () => selected.map(t => t.Id).filter((id): id is string | number => id != null),
+      [selected]
+    ),
+    useCallback(() => setMenuAnchor(null), []),
+    useCallback((name: string, added: number) => setToast(`Added ${added} to ${name}`), [])
+  );
+
   const handleAddTo = useCallback(
     async (playlist: PlaylistRow) => {
       setMenuAnchor(null);
@@ -194,13 +214,16 @@ export default function SelectionBar({
       </Box>
 
       <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={() => setMenuAnchor(null)}>
+        {newPlaylistItem}
+        {!!playlists?.length && <Divider />}
         {(playlists ?? []).map(p => (
           <MenuItem key={p.Id} onClick={() => handleAddTo(p)}>
             {p.Name}
           </MenuItem>
         ))}
-        {playlists && !playlists.length && <MenuItem disabled>No playlists yet</MenuItem>}
       </Menu>
+
+      {newPlaylistDialog}
 
       <Snackbar
         open={!!toast}

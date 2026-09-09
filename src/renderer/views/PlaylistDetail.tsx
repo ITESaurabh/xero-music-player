@@ -8,6 +8,8 @@ import {
   LinearProgress,
   Menu,
   MenuItem,
+  ListItemIcon,
+  ListItemText,
   Stack,
   TextField,
   Typography,
@@ -27,6 +29,7 @@ import AppDialog from '../components/AppDialog';
 import AddTracksDialog from '../components/AddTracksDialog';
 import ArtistCell from '../components/ArtistCell';
 import SelectionBar, { toEditableTracks, useTrackSelection } from '../components/SelectionBar';
+import { useTrackMenu } from '../components/TrackContextMenu';
 import TagEditorDialog, { EditableTrack } from '../components/TagEditorDialog';
 import { useIpc } from '../state/ipc';
 import { store, Track } from '../utils/store';
@@ -154,6 +157,25 @@ const PlaylistDetail: React.FC = () => {
       await refresh();
     },
     [invokeEventToMainProcess, id, refresh]
+  );
+
+  const { openTrackMenu, trackMenu } = useTrackMenu(
+    useCallback(
+      (song: Track, close: () => void) => (
+        <MenuItem
+          onClick={() => {
+            close();
+            void handleRemove(song as PlaylistTrackRow);
+          }}
+        >
+          <ListItemIcon>
+            <Icon icon={dismissIcon} width={20} />
+          </ListItemIcon>
+          <ListItemText>Remove from playlist</ListItemText>
+        </MenuItem>
+      ),
+      [handleRemove]
+    )
   );
 
   const handleAddTracks = useCallback(
@@ -346,6 +368,7 @@ const PlaylistDetail: React.FC = () => {
                       ...(isActive || isSelected ? { bgcolor: 'surfaces.selection' } : {}),
                       '&:hover .rowCheck': { opacity: 1 },
                     }}
+                    onContextMenu={e => openTrackMenu(e, track)}
                   >
                     <Box sx={{ color: 'text.disabled', cursor: 'grab', display: 'flex' }}>
                       <DragIndicatorIcon fontSize="small" />
@@ -429,6 +452,8 @@ const PlaylistDetail: React.FC = () => {
           </Reorder.Group>
         )}
       </Box>
+
+      {trackMenu}
 
       {editTracks && (
         <TagEditorDialog

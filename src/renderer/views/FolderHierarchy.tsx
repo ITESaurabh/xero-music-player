@@ -4,7 +4,6 @@ import {
   Box,
   Breadcrumbs,
   Button,
-  Checkbox,
   Collapse,
   IconButton,
   LinearProgress,
@@ -16,7 +15,6 @@ import {
 import { useSearchParams, useLocation, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import folderIcon from '@iconify/icons-fluent/folder-24-filled';
-import musicNoteIcon from '@iconify/icons-fluent/music-note-2-24-regular';
 import chevronRightIcon from '@iconify/icons-fluent/chevron-right-16-regular';
 import arrowUpIcon from '@iconify/icons-fluent/arrow-up-24-regular';
 import homeIcon from '@iconify/icons-fluent/home-24-regular';
@@ -25,8 +23,12 @@ import revealIcon from '@iconify/icons-fluent/folder-arrow-right-24-regular';
 import PageToolbar from '../components/PageToolbar';
 import Empty from '../components/Empty';
 import SelectionBar, { toEditableTracks, useTrackSelection } from '../components/SelectionBar';
+import { useTrackMenu } from '../components/TrackContextMenu';
 import TagEditorDialog, { EditableTrack } from '../components/TagEditorDialog';
-import ArtistCell from '../components/ArtistCell';
+import TrackRow, {
+  TRACK_ROW_H,
+  TRACK_ROW_PHONE_H,
+} from '../components/TrackRow';
 import ViewModeToggle, { GRID_MIN_PX, GRID_GAP, GRID_ICON_REM } from '../components/ViewModeToggle';
 import { useIpc } from '../state/ipc';
 import { store, Track } from '../utils/store';
@@ -46,14 +48,6 @@ interface FolderChildren {
   songs: Track[];
   isRoot: boolean;
 }
-
-const formatDuration = (seconds: unknown): string => {
-  const secs = typeof seconds === 'number' && seconds > 0 ? seconds : null;
-  if (secs == null) return '';
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-};
 
 const detectSep = (p: string): '\\' | '/' => (p.includes('\\') ? '\\' : '/');
 
@@ -171,8 +165,6 @@ const HEADER_H = 40;
 const SECTION_GAP_H = 16;
 const FOLDER_ROW_H = 40;
 const FOLDER_ROOT_ROW_H = 60;
-const SONG_ROW_H = 54;
-const SONG_ROW_PHONE_H = 34;
 const GRID_CARD_H: Record<GridSize, number> = { small: 122, medium: 138, large: 154 };
 
 const FolderListRow: React.FC<{
@@ -232,129 +224,6 @@ const FolderListRow: React.FC<{
 ));
 FolderListRow.displayName = 'FolderListRow';
 
-const SongRow: React.FC<{
-  song: Track;
-  index: number;
-  height: number;
-  isPhone: boolean;
-  isSelected: boolean;
-  isCurrent: boolean;
-  anySelected: boolean;
-  onPlay: (_index: number) => void;
-  onToggle: (_index: number, _extend: boolean) => void;
-  onOpenAlbum: (_albumId: string | number) => void;
-}> = React.memo(
-  ({
-    song,
-    index,
-    height,
-    isPhone,
-    isSelected,
-    isCurrent,
-    anySelected,
-    onPlay,
-    onToggle,
-    onOpenAlbum,
-  }) => (
-    <ListItemButton
-      data-track-id={song.Id ?? ''}
-      onClick={e => {
-        if ((e.target as HTMLElement).closest('[data-nav-cell]')) return;
-        onPlay(index);
-      }}
-      selected={isSelected || isCurrent}
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5,
-        borderRadius: 1,
-        px: 1.5,
-        py: 0.75,
-        height: height - 2,
-        '&:hover': { bgcolor: theme => alpha(theme.palette.text.primary, 0.06) },
-        '&:hover .rowCheck': { opacity: 1 },
-      }}
-    >
-      <Box
-        className="rowCheck"
-        data-nav-cell="true"
-        onClick={e => {
-          e.stopPropagation();
-          onToggle(index, e.shiftKey);
-        }}
-        sx={{
-          display: 'flex',
-          flexShrink: 0,
-          opacity: anySelected ? 1 : 0,
-          transition: 'opacity 120ms',
-        }}
-      >
-        <Checkbox size="medium" checked={isSelected} tabIndex={-1} sx={{ p: 0.25 }} />
-      </Box>
-      <Box
-        component="span"
-        sx={{
-          color: isCurrent ? 'primary.main' : 'text.secondary',
-          flexShrink: 0,
-          display: 'flex',
-        }}
-      >
-        <Icon icon={musicNoteIcon} height="1.1rem" />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" noWrap>
-          {(song.Title as string) || 'Unknown'}
-        </Typography>
-        {!isPhone && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              overflow: 'hidden',
-              color: 'text.secondary',
-            }}
-          >
-            <Box sx={{ flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
-              <ArtistCell artistNameRaw={song.ArtistName as string | undefined} variant="caption" />
-            </Box>
-            {song.AlbumTitle && (
-              <>
-                <Typography variant="caption" sx={{ flexShrink: 0, color: 'text.secondary' }}>
-                  &nbsp;·&nbsp;
-                </Typography>
-                <Typography
-                  variant="caption"
-                  noWrap
-                  data-nav-cell="true"
-                  onMouseDown={e => e.stopPropagation()}
-                  onClick={e => {
-                    e.stopPropagation();
-                    if (song.AlbumId != null) onOpenAlbum(song.AlbumId as string | number);
-                  }}
-                  sx={{
-                    flexShrink: 0,
-                    color: 'text.secondary',
-                    '&:hover':
-                      song.AlbumId != null
-                        ? { textDecoration: 'underline', color: 'primary.main' }
-                        : undefined,
-                  }}
-                >
-                  {song.AlbumTitle as string}
-                </Typography>
-              </>
-            )}
-          </Box>
-        )}
-      </Box>
-      <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
-        {formatDuration(song.Duration)}
-      </Typography>
-    </ListItemButton>
-  )
-);
-SongRow.displayName = 'SongRow';
-
 interface BodyData {
   rows: BodyRow[];
   cols: number;
@@ -363,11 +232,13 @@ interface BodyData {
   isPhone: boolean;
   selectedIds: Set<string | number>;
   currentTrackId: string | number | undefined;
+  isPlaying: boolean;
   onOpenFolder: (_path: string) => void;
   onPrefetch: (_path: string) => void;
   onPlaySong: (_index: number) => void;
   onToggleSong: (_index: number, _extend: boolean) => void;
   onOpenAlbum: (_albumId: string | number) => void;
+  onContextMenu: (_e: React.MouseEvent, _song: Track) => void;
 }
 
 const BodyRowRenderer: React.FC<ListChildComponentProps<BodyData>> = ({ index, style, data }) => {
@@ -422,17 +293,19 @@ const BodyRowRenderer: React.FC<ListChildComponentProps<BodyData>> = ({ index, s
     case 'song':
       return (
         <div style={style}>
-          <SongRow
+          <TrackRow
             song={row.song}
             index={row.index}
             height={data.songRowH}
-            isPhone={data.isPhone}
+            compact={data.isPhone}
             isSelected={row.song.Id != null && data.selectedIds.has(row.song.Id)}
             isCurrent={row.song.Id === data.currentTrackId}
+            isPlaying={data.isPlaying}
             anySelected={data.selectedIds.size > 0}
             onPlay={data.onPlaySong}
             onToggle={data.onToggleSong}
             onOpenAlbum={data.onOpenAlbum}
+            onContextMenu={data.onContextMenu}
           />
         </div>
       );
@@ -542,6 +415,7 @@ const FolderHierarchy: React.FC = () => {
   );
 
   const { selectedIds, selected, toggleAt, toggleAll, clear } = useTrackSelection(songs);
+  const { openTrackMenu, trackMenu } = useTrackMenu();
   const [editTracks, setEditTracks] = useState<EditableTrack[] | null>(null);
 
   // Walking into another folder ends the selection; the ids no longer belong to
@@ -578,7 +452,7 @@ const FolderHierarchy: React.FC = () => {
     () => gridColumns(bodyWidth, GRID_MIN_PX[gridSize], GRID_GAP[gridSize] * 8),
     [bodyWidth, gridSize]
   );
-  const songRowH = isPhone ? SONG_ROW_PHONE_H : SONG_ROW_H;
+  const songRowH = isPhone ? TRACK_ROW_PHONE_H : TRACK_ROW_H;
 
   const rows = useMemo(
     () =>
@@ -634,11 +508,13 @@ const FolderHierarchy: React.FC = () => {
       isPhone,
       selectedIds,
       currentTrackId: state.track?.Id,
+      isPlaying: state.isPlaying,
       onOpenFolder: navigateTo,
       onPrefetch: prefetchChildren,
       onPlaySong: handleSongClick,
       onToggleSong: toggleAt,
       onOpenAlbum: handleOpenAlbum,
+      onContextMenu: openTrackMenu,
     }),
     [
       rows,
@@ -648,11 +524,13 @@ const FolderHierarchy: React.FC = () => {
       isPhone,
       selectedIds,
       state.track?.Id,
+      state.isPlaying,
       navigateTo,
       prefetchChildren,
       handleSongClick,
       toggleAt,
       handleOpenAlbum,
+      openTrackMenu,
     ]
   );
 
@@ -880,6 +758,8 @@ const FolderHierarchy: React.FC = () => {
           </Box>
         )}
       </Box>
+
+      {trackMenu}
 
       {editTracks && (
         <TagEditorDialog

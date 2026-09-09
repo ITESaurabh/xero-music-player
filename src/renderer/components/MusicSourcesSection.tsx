@@ -584,6 +584,7 @@ export default function MusicSourcesSection() {
           </Button>
           <Button
             size="small"
+            variant="text"
             disabled={libraryBusy}
             onClick={async () => {
               await invokeEventToMainProcess('reset-download-folder', undefined).catch(

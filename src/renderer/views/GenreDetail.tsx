@@ -24,6 +24,7 @@ import LibraryTable, {
   type LibraryTableHandle,
 } from '../components/LibraryTable';
 import SelectionBar, { toEditableTracks, useTrackSelection } from '../components/SelectionBar';
+import { useTrackMenu } from '../components/TrackContextMenu';
 import TagEditorDialog, { EditableTrack } from '../components/TagEditorDialog';
 import { useIpc } from '../state/ipc';
 import { store, Track } from '../utils/store';
@@ -104,6 +105,7 @@ const GenreDetail: React.FC = () => {
   const listRef = React.useRef<LibraryTableHandle | null>(null);
   const { rows: songs, view } = useLibraryTable(allSongs, columns);
   const { selectedIds, selected, toggleAll, clear, replace } = useTrackSelection(songs);
+  const { openTrackMenu, trackMenu } = useTrackMenu();
   const [editTracks, setEditTracks] = React.useState<EditableTrack[] | null>(null);
 
   useEffect(() => {
@@ -233,6 +235,7 @@ const GenreDetail: React.FC = () => {
               view={view}
               isRowActive={song => song.Id === state.track?.Id}
               onRowClick={(_song, index) => handlePlayAll(index)}
+              onRowContextMenu={(song, e) => openTrackMenu(e, song)}
               selection={{ selectedIds, onReplace: replace }}
               listRef={listRef}
               initialScrollOffset={initialScrollOffset}
@@ -242,6 +245,8 @@ const GenreDetail: React.FC = () => {
           </>
         )}
       </Container>
+
+      {trackMenu}
 
       {editTracks && (
         <TagEditorDialog

@@ -20,6 +20,7 @@ import { motion, useMotionValue, useSpring } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PageToolbar from '../../components/PageToolbar';
 import SelectionBar, { toEditableTracks, useTrackSelection } from '../../components/SelectionBar';
+import { useTrackMenu } from '../../components/TrackContextMenu';
 import TagEditorDialog, { EditableTrack } from '../../components/TagEditorDialog';
 import Empty from '../../components/Empty';
 import { useIpc } from '../../state/ipc';
@@ -299,6 +300,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
   );
 
   const { selectedIds, selected, toggleAt, toggleAll, clear } = useTrackSelection(orderedSongs);
+  const { openTrackMenu, trackMenu } = useTrackMenu();
   const [editTracks, setEditTracks] = React.useState<EditableTrack[] | null>(null);
 
   /** Every list on this page indexes into `orderedSongs`, selection included. */
@@ -687,6 +689,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                           key={song.Id ?? trackIndex}
                           data-track-id={song.Id ?? ''}
                           selected={song.Id === state.track?.Id || isSelected(song)}
+                          onContextMenu={e => openTrackMenu(e, song)}
                           onClick={() =>
                             handlePlayAll(orderedSongs.findIndex(s => s.Id === song.Id))
                           }
@@ -776,6 +779,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                         key={song.Id ?? index}
                         data-track-id={song.Id ?? ''}
                         selected={song.Id === state.track?.Id || isSelected(song)}
+                        onContextMenu={e => openTrackMenu(e, song)}
                         onClick={() => handlePlayAll(index)}
                         sx={{
                           width: '100%',
@@ -863,6 +867,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                         key={song.Id ?? index}
                         data-track-id={song.Id ?? ''}
                         selected={song.Id === state.track?.Id || isSelected(song)}
+                        onContextMenu={e => openTrackMenu(e, song)}
                         onClick={() => handlePlayAll(orderedSongs.findIndex(s => s.Id === song.Id))}
                         sx={{
                           width: '100%',
@@ -935,6 +940,8 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
           )}
         </Box>
       </Box>
+
+      {trackMenu}
 
       {editTracks && (
         <TagEditorDialog
