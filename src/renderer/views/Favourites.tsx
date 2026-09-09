@@ -322,6 +322,11 @@ const Favourites: React.FC = () => {
         open={report !== null}
         onClose={() => setReport(null)}
         title={report?.kind === 'export' ? 'Export favourites' : 'Import favourites'}
+        actions={
+          <>
+            <Button onClick={() => setReport(null)}>Close</Button>
+          </>
+        }
       >
         <Stack spacing={1.5}>
           {report?.error && <Alert severity="error">{report.error}</Alert>}
@@ -365,10 +370,6 @@ const Favourites: React.FC = () => {
               </Box>
             </>
           )}
-
-          <Stack direction="row" justifyContent="flex-end">
-            <Button onClick={() => setReport(null)}>Close</Button>
-          </Stack>
         </Stack>
       </AppDialog>
 

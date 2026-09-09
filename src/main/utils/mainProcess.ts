@@ -591,6 +591,31 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   ipcMain.on('closeWindow', () => {
     mainWin.close();
   });
+
+  /**
+   * A screen holding unsaved work (Lyric Studio) gets asked before the window
+   * goes, so closing the app cannot bypass the prompt the back button already
+   * respects. Covers the title bar's close button, the native frame's X and
+   * Alt+F4, since all three land on this one event.
+   *
+   * Only intercepts while the renderer says a guard is registered. With none,
+   * close is untouched, so a wedged renderer cannot make the window unclosable.
+   */
+  let guarded = false;
+  let closeApproved = false;
+  ipcMain.on('nav-guard-active', (_e, active: boolean) => {
+    guarded = Boolean(active);
+  });
+  mainWin.on('close', event => {
+    if (closeApproved || !guarded || mainWin.webContents.isDestroyed()) return;
+    event.preventDefault();
+    mainWin.webContents.send('confirm-close');
+  });
+  ipcMain.on('confirm-close-reply', (_e, approved: boolean) => {
+    if (!approved) return;
+    closeApproved = true;
+    mainWin.close();
+  });
   ipcMain.handle('get-dark-mode', () => {
     return nativeTheme.shouldUseDarkColors;
   });

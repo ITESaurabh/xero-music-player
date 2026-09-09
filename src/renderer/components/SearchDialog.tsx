@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router';
 import { useIpc } from '../state/ipc';
 import { Theme } from '@mui/material/styles';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../utils/useKeyboardShortcuts';
+import { keyCapSx } from './KeyCaps';
 
 interface SearchCategory {
   title: string;
@@ -500,16 +501,14 @@ export default function SearchDialog() {
                 {isSearching && <CircularProgress size={18} color="secondary" sx={{ mr: 1.5 }} />}
                 <Box
                   component={ButtonBase}
-                  sx={{
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.4rem',
-                    border: 1,
-                    borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.3),
-                    backgroundColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.1),
-                    '&:hover': {
-                      backgroundColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.2),
+                  sx={[
+                    keyCapSx,
+                    {
+                      '&:hover': {
+                        backgroundColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.2),
+                      },
                     },
-                  }}
+                  ]}
                 >
                   esc
                 </Box>

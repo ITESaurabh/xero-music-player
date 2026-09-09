@@ -122,7 +122,27 @@ const DuplicateTracksDialog: React.FC<DuplicateTracksDialogProps> = ({ open, onC
   const extraCopies = groups?.reduce((n, g) => n + g.tracks.length - 1, 0) ?? 0;
 
   return (
-    <AppDialog open={open} onClose={busy ? () => undefined : onClose} title="Duplicate Tracks" maxWidth="md">
+    <AppDialog
+      open={open}
+      onClose={busy ? () => undefined : onClose}
+      title="Duplicate Tracks"
+      maxWidth="md"
+      actions={
+        <>
+          <Button onClick={onClose} disabled={busy}>
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={busy || selected.size === 0}
+            onClick={handleRemove}
+          >
+            {busy ? 'Removing…' : `Remove ${selected.size} from library`}
+          </Button>
+        </>
+      }
+    >
       <Stack spacing={1.5}>
         <Typography variant="body2" color="text.secondary">
           Files that are byte-for-byte identical, grouped together. The same song ripped twice at
@@ -215,20 +235,6 @@ const DuplicateTracksDialog: React.FC<DuplicateTracksDialogProps> = ({ open, onC
             ))}
           </>
         )}
-
-        <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1 }}>
-          <Button onClick={onClose} disabled={busy}>
-            Close
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={busy || selected.size === 0}
-            onClick={handleRemove}
-          >
-            {busy ? 'Removing…' : `Remove ${selected.size} from library`}
-          </Button>
-        </Stack>
       </Stack>
     </AppDialog>
   );

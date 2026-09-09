@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import Titlebar from './Titlebar';
-import { alpha, styled, Theme } from '@mui/material/styles';
-import MuiDrawer from '@mui/material/Drawer';
+import { alpha, Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import { Alert, IconButton, Paper, Snackbar, Stack, useMediaQuery } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
@@ -11,37 +10,10 @@ import KeyboardArrowUpRounded from '@mui/icons-material/KeyboardArrowUpRounded';
 
 import PlayBar from './PlayBar';
 import MainDrawer from './MainDrawer';
+import AppDrawer from './AppDrawer';
 import { store } from '../utils/store';
 import { PLAYBACK_ERROR_EVENT } from '../utils/LocStoreUtil';
 import SearchDialog from './SearchDialog';
-
-const drawerWidth = 320;
-
-const Drawer = styled(MuiDrawer, { shouldForwardProp: prop => prop !== 'open' })(
-  ({ theme, open }: { theme: Theme; open?: boolean }) => ({
-    '& .MuiDrawer-paper': {
-      position: 'relative',
-      whiteSpace: 'nowrap',
-      width: drawerWidth,
-      transition: theme.transitions.create('width', {
-        easing: theme.transitions.easing.sharp,
-        duration: theme.transitions.duration.enteringScreen,
-      }),
-      boxSizing: 'border-box',
-      ...(!open && {
-        overflowX: 'hidden',
-        transition: theme.transitions.create('width', {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.leavingScreen,
-        }),
-        width: theme.spacing(7),
-        [theme.breakpoints.up('sm')]: {
-          width: theme.spacing(9),
-        },
-      }),
-    },
-  })
-);
 
 function Layout() {
   const isPhone = useMediaQuery(({ breakpoints }: Theme) => breakpoints.down('md'));
@@ -67,7 +39,7 @@ function Layout() {
     <Box height={'100%'}>
       <Titlebar />
       <Box display={'flex'} height={'100%'}>
-        <Drawer
+        <AppDrawer
           variant={isPhone ? 'temporary' : 'permanent'}
           sx={{
             height: '100%',
@@ -86,7 +58,7 @@ function Layout() {
           open={state.isMenuExpanded}
         >
           <MainDrawer />
-        </Drawer>
+        </AppDrawer>
         <Stack
           sx={{
             height: '100%',

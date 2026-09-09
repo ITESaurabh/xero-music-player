@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Box,
   Dialog,
   DialogContent,
   Stack,
@@ -51,8 +52,15 @@ const AppDialog: React.FC<AppDialogProps> = ({
       fullWidth={fullWidth}
       fullScreen={fullScreenOnMobile ? isPhone : false}
       scroll={scroll}
+      onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       sx={{ mt: 4, zIndex: (theme: Theme) => theme.zIndex.drawer + 1 }}
-      PaperProps={{ sx: { flex: 1 } }}
+      PaperProps={{
+        sx: {
+          flex: 1,
+          border: (theme: Theme) => `1px solid ${theme.palette.surfaces.glassBorder}`,
+        },
+      }}
       slotProps={{
         backdrop: {
           sx: {
@@ -70,11 +78,12 @@ const AppDialog: React.FC<AppDialogProps> = ({
           alignItems="center"
           justifyContent="space-between"
           sx={{
-            p: 1.5,
+            pt: 1.5,
+            px: 1.5,
             backgroundColor: (theme: Theme) => theme.palette.background.paper,
           }}
         >
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, pl: 1 }}>
+          <Typography variant="body1" sx={{ fontWeight: 600, pl: 0.5, fontSize: 18 }}>
             {title}
           </Typography>
           {headerAction}
@@ -85,6 +94,8 @@ const AppDialog: React.FC<AppDialogProps> = ({
         dividers={dividers}
         sx={{
           backgroundColor: (theme: Theme) => theme.palette.background.paper,
+          borderColor: (theme: Theme) => theme.palette.surfaces.glassBorder,
+          borderTop: 'none',
           p: 2,
           ...contentSx,
         }}
@@ -93,15 +104,19 @@ const AppDialog: React.FC<AppDialogProps> = ({
       </DialogContent>
 
       {actions && (
-        <Stack
-          direction="row"
-          spacing={1}
-          useFlexGap
-          justifyContent="flex-end"
-          sx={{ p: 1.5, backgroundColor: (theme: Theme) => theme.palette.background.paper }}
+        <Box
+          sx={{
+            p: 1.5,
+            display: 'grid',
+            gridAutoFlow: 'column',
+            gridAutoColumns: '1fr',
+            gap: 1,
+            backgroundColor: (theme: Theme) => theme.palette.surfaces.listHeader,
+            '& .MuiButton-root': { width: '100%' },
+          }}
         >
           {actions}
-        </Stack>
+        </Box>
       )}
     </Dialog>
   );

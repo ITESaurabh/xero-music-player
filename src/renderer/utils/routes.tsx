@@ -22,6 +22,7 @@ const Genres = lazy(() => import('../views/Genres'));
 const GenreDetail = lazy(() => import('../views/GenreDetail'));
 const Years = lazy(() => import('../views/Years'));
 const YearDetail = lazy(() => import('../views/YearDetail'));
+const LyricStudio = lazy(() => import('../views/LyricStudio'));
 
 const BigLoader = () => {
   return (
@@ -214,6 +215,16 @@ const routes = [
         ),
       },
     ],
+  },
+  // Outside Layout on purpose: the studio replaces the drawer and the play bar
+  // with its own chrome, and owns the audio element for the track it is editing.
+  {
+    path: '/lyric-studio/:trackId',
+    element: (
+      <Page>
+        <LyricStudio />
+      </Page>
+    ),
   },
   { path: '*', element: <Navigate to="main_window" /> },
 ];

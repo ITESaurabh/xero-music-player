@@ -43,6 +43,7 @@ async function main() {
     track: 7,
     comment: 'hello',
     encodedBy: 'XeroTunes',
+    lyrics: '[00:07.19]first line\n[00:08.56]second line',
     artPath: art,
   });
 
@@ -59,6 +60,12 @@ async function main() {
   // encodedBy is written per container format, so this catches a wrong frame id.
   assert.strictEqual(common.encodedby, 'XeroTunes');
   assert.strictEqual(common.picture.length, 1);
+  // Lyric Studio's embed target. The timestamps have to survive verbatim, since
+  // that text is what the player parses back as synced lyrics.
+  const embedded = Array.isArray(common.lyrics)
+    ? common.lyrics.map(l => (typeof l === 'string' ? l : l.text)).join('\n')
+    : common.lyrics;
+  assert.strictEqual(embedded, '[00:07.19]first line\n[00:08.56]second line');
 
   // A second write must leave untouched fields alone; that is what makes an
   // album-wide edit safe to apply over per-track values.

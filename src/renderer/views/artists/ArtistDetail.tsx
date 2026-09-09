@@ -527,11 +527,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                 open={biographyOpen}
                 onClose={() => setBiographyOpen(false)}
                 title={`${artist?.Name} - Biography`}
-                headerAction={
-                  <Button size="small" onClick={() => setBiographyOpen(false)}>
-                    Close
-                  </Button>
-                }
+                actions={<Button onClick={() => setBiographyOpen(false)}>Close</Button>}
               >
                 <Typography
                   variant="body2"
@@ -724,7 +720,12 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                               transition: 'opacity 120ms',
                             }}
                           >
-                            <Checkbox size="small" checked={isSelected(song)} tabIndex={-1} sx={{ p: 0.25 }} />
+                            <Checkbox
+                              size="small"
+                              checked={isSelected(song)}
+                              tabIndex={-1}
+                              sx={{ p: 0.25 }}
+                            />
                           </Box>
                           <Box sx={{ minWidth: 40, pr: 2, textAlign: 'right' }}>
                             <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
@@ -806,7 +807,12 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                             transition: 'opacity 120ms',
                           }}
                         >
-                          <Checkbox size="small" checked={isSelected(song)} tabIndex={-1} sx={{ p: 0.25 }} />
+                          <Checkbox
+                            size="small"
+                            checked={isSelected(song)}
+                            tabIndex={-1}
+                            sx={{ p: 0.25 }}
+                          />
                         </Box>
                         <Box sx={{ minWidth: 40, pr: 2, textAlign: 'right' }}>
                           <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
@@ -888,7 +894,12 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
                             transition: 'opacity 120ms',
                           }}
                         >
-                          <Checkbox size="small" checked={isSelected(song)} tabIndex={-1} sx={{ p: 0.25 }} />
+                          <Checkbox
+                            size="small"
+                            checked={isSelected(song)}
+                            tabIndex={-1}
+                            sx={{ p: 0.25 }}
+                          />
                         </Box>
                         <Box sx={{ minWidth: 40, pr: 2, textAlign: 'right' }}>
                           <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
@@ -926,7 +937,12 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
       </Box>
 
       {editTracks && (
-        <TagEditorDialog open onClose={() => setEditTracks(null)} mode="track" tracks={editTracks} />
+        <TagEditorDialog
+          open
+          onClose={() => setEditTracks(null)}
+          mode="track"
+          tracks={editTracks}
+        />
       )}
     </Box>
   );

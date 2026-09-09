@@ -120,7 +120,24 @@ const ThemeEditorDialog: React.FC<ThemeEditorDialogProps> = ({
   const colorError = 'error' in parsed ? parsed.error : '';
 
   return (
-    <AppDialog open={open} onClose={onClose} title="Customise Theme" maxWidth="md">
+    <AppDialog
+      open={open}
+      onClose={onClose}
+      title="Customise Theme"
+      maxWidth="md"
+      actions={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={!!nameError || !!colorError}
+            onClick={() => onSave({ ...draft, name })}
+          >
+            Save
+          </Button>
+        </>
+      }
+    >
       <Stack spacing={2}>
         <TextField
           size="small"
@@ -202,17 +219,6 @@ const ThemeEditorDialog: React.FC<ThemeEditorDialogProps> = ({
             </Stack>
           ))}
         </Box>
-
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            disabled={!!nameError || !!colorError}
-            onClick={() => onSave({ ...draft, name })}
-          >
-            Save
-          </Button>
-        </Stack>
       </Stack>
     </AppDialog>
   );

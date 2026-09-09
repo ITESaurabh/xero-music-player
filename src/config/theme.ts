@@ -100,7 +100,7 @@ export const surfacesFor = (c: ThemeColors, mode: PaletteMode): ThemeSurfaces =>
     // Rails still step *down* from the page, or they collapse into it.
     well: isDark ? deep : darken(c.backgroundDefault, 0.2),
     glass: alpha(isDark ? deep : darken(c.backgroundDefault, 0.05), isDark ? 0.6 : 0.72),
-    glassBorder: alpha(deep, isDark ? 0.25 : 0.15),
+    glassBorder: isDark ? alpha(pale, 0.16) : alpha(deep, 0.15),
     scrim: alpha(isDark ? deep : pale, 0.5),
     accent: isDark ? darken(c.primary, 0.32) : c.primary,
     selection: alpha(c.primary, isDark ? 0.18 : 0.16),
@@ -358,6 +358,7 @@ export const getBaseTheme = (mode: PaletteMode, theme: AppTheme = AMETHYST) => {
       MuiButton: {
         defaultProps: {
           disableElevation: true,
+          variant: 'outlined' as const,
         },
       },
       // The group draws its own shadow; MuiButton's disableElevation doesn't reach it.

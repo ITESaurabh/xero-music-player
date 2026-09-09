@@ -9,6 +9,7 @@ export interface TagFields {
   track?: number | null;
   comment?: string;
   encodedBy?: string;
+  lyrics?: string | null;
   /** Path to an image file, or null to strip the embedded art. */
   artPath?: string | null;
 }

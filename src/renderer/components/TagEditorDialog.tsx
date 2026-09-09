@@ -27,6 +27,8 @@ import SongInfoDialog from './SongInfoDialog';
 import { useIpc } from '../state/ipc';
 import { QUERY_KEYS } from '../constants/queryKeys';
 import { DEFAULT_AA, isTaggable } from '../../config/constants';
+import { isRemotePath } from '../utils/lyricsSource';
+import { useNavigate } from 'react-router';
 
 export interface EditableTrack {
   Id: number | string;
@@ -252,6 +254,7 @@ function TagField({
 
 export default function TagEditorDialog({ open, onClose, mode, tracks }: TagEditorDialogProps) {
   const { invokeEventToMainProcess } = useIpc();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: libraryGenres } = useQuery({
@@ -547,6 +550,35 @@ export default function TagEditorDialog({ open, onClose, mode, tracks }: TagEdit
 
   const busy = loading || saving;
 
+  /**
+   * The studio edits one track's lyrics against its own playback, so it needs a
+   * single local file with a library row behind it.
+   *
+   * Blocked while there are unsaved tag edits: opening the studio navigates away
+   * and would drop them with no warning.
+   */
+  const studioTrack = selectedTracks.length === 1 ? selectedTracks[0] : null;
+  const canOpenStudio =
+    !!studioTrack &&
+    !busy &&
+    !isDirty &&
+    typeof studioTrack.Id === 'number' &&
+    !isRemotePath(studioTrack.Uri);
+
+  const studioHint = !studioTrack
+    ? 'Select a single track to write lyrics for'
+    : isDirty
+      ? 'Save or cancel your tag edits first'
+      : !canOpenStudio
+        ? 'Lyrics can only be written for a local track in your library'
+        : 'Write and sync this track’s lyrics';
+
+  const openStudio = useCallback(() => {
+    if (!studioTrack) return;
+    onClose();
+    navigate(`/lyric-studio/${studioTrack.Id}`);
+  }, [studioTrack, onClose, navigate]);
+
   return (
     <AppDialog
       open={open}
@@ -561,14 +593,19 @@ export default function TagEditorDialog({ open, onClose, mode, tracks }: TagEdit
       actions={
         <>
           {mode === 'track' && (
-            <Button
-              disabled
-              variant="outlined"
-              startIcon={<Icon icon={mic24Regular} width={18} />}
-              sx={{ mr: 'auto' }}
-            >
-              Lyrics Studio
-            </Button>
+            <Tooltip title={studioHint}>
+              {/* Span so the tooltip still fires while the button is disabled. */}
+              <span style={{ marginRight: 'auto' }}>
+                <Button
+                  disabled={!canOpenStudio}
+                  onClick={openStudio}
+                  variant="outlined"
+                  startIcon={<Icon icon={mic24Regular} width={18} />}
+                >
+                  Lyrics Studio
+                </Button>
+              </span>
+            </Tooltip>
           )}
           <Button onClick={onClose} disabled={saving}>
             Cancel

@@ -398,7 +398,19 @@ const Playlists: React.FC = () => {
         )}
       </Box>
 
-      <AppDialog open={createOpen} onClose={() => setCreateOpen(false)} title="New Playlist">
+      <AppDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="New Playlist"
+        actions={
+          <>
+            <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={() => void handleCreate()}>
+              Create
+            </Button>
+          </>
+        }
+      >
         <Stack spacing={2}>
           <TextField
             autoFocus
@@ -410,12 +422,6 @@ const Playlists: React.FC = () => {
               if (e.key === 'Enter') void handleCreate();
             }}
           />
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => void handleCreate()}>
-              Create
-            </Button>
-          </Stack>
         </Stack>
       </AppDialog>
 
@@ -423,6 +429,14 @@ const Playlists: React.FC = () => {
         open={renameTarget !== null}
         onClose={() => setRenameTarget(null)}
         title="Rename Playlist"
+        actions={
+          <>
+            <Button onClick={() => setRenameTarget(null)}>Cancel</Button>
+            <Button variant="contained" onClick={() => void handleRename()}>
+              Save
+            </Button>
+          </>
+        }
       >
         <Stack spacing={2}>
           <TextField
@@ -435,21 +449,21 @@ const Playlists: React.FC = () => {
               if (e.key === 'Enter') void handleRename();
             }}
           />
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button onClick={() => setRenameTarget(null)}>Cancel</Button>
-            <Button variant="contained" onClick={() => void handleRename()}>
-              Save
-            </Button>
-          </Stack>
         </Stack>
       </AppDialog>
 
-      <AppDialog open={report !== null} onClose={() => setReport(null)} title="Playlists">
+      <AppDialog
+        open={report !== null}
+        onClose={() => setReport(null)}
+        title="Playlists"
+        actions={
+          <>
+            <Button onClick={() => setReport(null)}>Close</Button>
+          </>
+        }
+      >
         <Stack spacing={1.5}>
           <Alert severity={report?.success ? 'success' : 'error'}>{report?.message}</Alert>
-          <Stack direction="row" justifyContent="flex-end">
-            <Button onClick={() => setReport(null)}>Close</Button>
-          </Stack>
         </Stack>
       </AppDialog>
     </Box>

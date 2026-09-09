@@ -6,7 +6,6 @@ import {
   CircularProgress,
   InputAdornment,
   ListItemButton,
-  Stack,
   TextField,
   Typography,
 } from '@mui/material';
@@ -111,6 +110,23 @@ const AddTracksDialog: React.FC<AddTracksDialogProps> = ({ open, onClose, onAdd 
       maxWidth="md"
       contentSx={{ display: 'flex', flexDirection: 'column', p: 0, height: '70vh' }}
       onEntered={() => setDialogReady(true)}
+      headerAction={
+        <Typography variant="body2" color="text.secondary">
+          {selected.size} selected
+        </Typography>
+      }
+      actions={
+        <>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={selected.size === 0 || adding}
+            onClick={() => void handleAdd()}
+          >
+            Add {selected.size > 0 ? selected.size : ''}
+          </Button>
+        </>
+      }
     >
       <Box sx={{ p: 2 }}>
         <TextField
@@ -154,26 +170,6 @@ const AddTracksDialog: React.FC<AddTracksDialogProps> = ({ open, onClose, onAdd 
           </AutoSizer>
         )}
       </Box>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          {selected.size} selected
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            disabled={selected.size === 0 || adding}
-            onClick={() => void handleAdd()}
-          >
-            Add {selected.size > 0 ? selected.size : ''}
-          </Button>
-        </Stack>
-      </Stack>
     </AppDialog>
   );
 };

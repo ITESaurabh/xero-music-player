@@ -253,7 +253,19 @@ const Streams: React.FC = () => {
         )}
       </Box>
 
-      <AppDialog open={addOpen} onClose={() => setAddOpen(false)} title="Add Stream">
+      <AppDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Stream"
+        actions={
+          <>
+            <Button onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={() => void handleAdd()}>
+              Add
+            </Button>
+          </>
+        }
+      >
         <Stack spacing={2}>
           <TextField
             autoFocus
@@ -272,21 +284,21 @@ const Streams: React.FC = () => {
               if (e.key === 'Enter') void handleAdd();
             }}
           />
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => void handleAdd()}>
-              Add
-            </Button>
-          </Stack>
         </Stack>
       </AppDialog>
 
-      <AppDialog open={report !== null} onClose={() => setReport(null)} title="Streams">
+      <AppDialog
+        open={report !== null}
+        onClose={() => setReport(null)}
+        title="Streams"
+        actions={
+          <>
+            <Button onClick={() => setReport(null)}>Close</Button>
+          </>
+        }
+      >
         <Stack spacing={1.5}>
           <Alert severity={report?.success ? 'success' : 'error'}>{report?.message}</Alert>
-          <Stack direction="row" justifyContent="flex-end">
-            <Button onClick={() => setReport(null)}>Close</Button>
-          </Stack>
         </Stack>
       </AppDialog>
     </Box>

@@ -66,7 +66,6 @@ import { DEFAULT_AA } from '../../config/constants';
 const { ipcRenderer } = window.require('electron');
 import { motion } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router';
-import { parseFile } from 'music-metadata';
 import ImagePreviewDialog from './ImagePreviewDialog';
 import SongInfoDialog from './SongInfoDialog';
 import TagEditorDialog, { EditableTrack } from './TagEditorDialog';
@@ -77,6 +76,7 @@ import type { CastDevice, CastLoadPayload, CastStatus } from '../../main/modules
 import Marquee from './Marquee';
 import PlaybackProgress from './PlaybackProgress';
 import LyricsPanel from './LyricsPanel';
+import { resolveLyrics, type LyricsSource } from '../utils/lyricsSource';
 
 // ── Styled primitives ──────────────────────────────────────────────────────
 
@@ -285,24 +285,6 @@ const DiscordIconButton = styled(IconButton, {
   opacity: enabled ? 1 : 0.35,
 }));
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function syltToLrc(synchronisedText: Array<{ text: string; timestamp: number }>): string {
-  return synchronisedText
-    .map(({ text, timestamp }) => {
-      const mins = Math.floor(timestamp / 60000);
-      const secs = Math.floor((timestamp % 60000) / 1000);
-      const centis = Math.floor((timestamp % 1000) / 10);
-      return `[${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(centis).padStart(2, '0')}]${text}`;
-    })
-    .join('\n');
-}
-
-// ── Component ──────────────────────────────────────────────────────────────
-
-/** An LRC line carrying a timestamp, i.e. lyrics that can follow playback. */
-const SYNCED_LRC = /\[\d{2}:\d{2}[.:]\d{2}/;
-
 /** `stream:12` → 12; anything else (a library id, a file path) → undefined. */
 function streamIdOf(id: string | number | undefined): number | undefined {
   const match = typeof id === 'string' && /^stream:(\d+)$/.exec(id);
@@ -317,7 +299,7 @@ export default function PlayBar() {
   const defaultVol = getVolumeLevel();
   const [songPath, setSongPath] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  // Hidden silent loop — keeps MediaSession active across track changes
+  // Hidden silent loop - keeps MediaSession active across track changes
   // so SMTC doesn't drop the OS-level entry. See silentSrc below.
   const silentAudioRef = useRef<HTMLAudioElement>(null);
   const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -365,12 +347,8 @@ export default function PlayBar() {
   const isLyricsExpanded = state.isLyricsExpanded;
   const [previewOpen, setPreviewOpen] = useState(false);
   const [lrcContent, setLrcContent] = useState<string | null>(null);
-  const [lyricsSource, setLyricsSource] = useState<'LRC file' | 'Embedded' | 'Server' | null>(null);
+  const [lyricsSource, setLyricsSource] = useState<LyricsSource | null>(null);
   const [lyricsType, setLyricsType] = useState<'synced' | 'unsynced' | null>(null);
-
-  // Streamed track: there is no local file to find a sidecar .lrc beside, and
-  // no local bytes to read embedded lyrics out of.
-  const isRemoteSongPath = !!songPath && /^https?:\/\//i.test(songPath);
 
   useEffect(() => {
     if (!songPath) {
@@ -380,120 +358,16 @@ export default function PlayBar() {
       return;
     }
     let cancelled = false;
-
-    // A streamed track has no local file to read, but the server keeps the
-    // lyrics and hands them back as LRC, so the same parser below applies.
-    if (isRemoteSongPath) {
-      const trackId = state.track?.Id;
-      if (trackId == null) return;
-      ipcRenderer
-        .invoke('get-remote-lyrics', { trackId })
-        .then((lrc: unknown) => {
-          if (cancelled) return;
-          if (typeof lrc === 'string' && lrc.trim()) {
-            setLrcContent(lrc);
-            setLyricsSource('Server');
-            setLyricsType(SYNCED_LRC.test(lrc) ? 'synced' : 'unsynced');
-          } else {
-            setLrcContent(null);
-            setLyricsSource(null);
-            setLyricsType(null);
-          }
-        })
-        .catch(() => undefined);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    (async () => {
-      const fs = window.require('fs') as typeof import('fs');
-      const nodePath = window.require('path') as typeof import('path');
-
-      // 1. Try sidecar .lrc file — determine synced vs unsynced by content
-      const dir = nodePath.dirname(songPath);
-      const base = nodePath.basename(songPath, nodePath.extname(songPath));
-      const lrcPath = nodePath.join(dir, `${base}.lrc`);
-      if (fs.existsSync(lrcPath)) {
-        try {
-          const content = fs.readFileSync(lrcPath, 'utf8');
-          const isSynced = SYNCED_LRC.test(content);
-          if (!cancelled) {
-            setLrcContent(content);
-            setLyricsSource('LRC file');
-            setLyricsType(isSynced ? 'synced' : 'unsynced');
-          }
-          return;
-        } catch {
-          /* fall through */
-        }
-      }
-
-      // 2. Try embedded tags via music-metadata
-      try {
-        const metadata = await parseFile(songPath, { skipCovers: true });
-        const nativeFrames = [
-          ...(metadata.native['ID3v2.3'] ?? []),
-          ...(metadata.native['ID3v2.4'] ?? []),
-        ];
-
-        const sylt = nativeFrames.find(f => f.id === 'SYLT');
-        const syltVal = sylt?.value as
-          { synchronisedText?: Array<{ text: string; timestamp: number }> } | undefined;
-        if (syltVal?.synchronisedText?.length) {
-          const lrc = syltToLrc(syltVal.synchronisedText);
-          if (!cancelled) {
-            setLrcContent(lrc);
-            setLyricsSource('Embedded');
-            setLyricsType('synced');
-          }
-          return;
-        }
-
-        const uslt = nativeFrames.find(f => f.id === 'USLT');
-        const usltVal = uslt?.value as { text?: string } | undefined;
-        if (usltVal?.text) {
-          const text: string = usltVal.text;
-          const isSynced = SYNCED_LRC.test(text);
-          if (!cancelled) {
-            setLrcContent(text);
-            setLyricsSource('Embedded');
-            setLyricsType(isSynced ? 'synced' : 'unsynced');
-          }
-          return;
-        }
-
-        const commonLyrics = (metadata.common as unknown as Record<string, unknown>).lyrics;
-        const lyricText = Array.isArray(commonLyrics)
-          ? (commonLyrics as Array<{ text?: string } | string>)
-              .map(l => (typeof l === 'string' ? l : (l?.text ?? '')))
-              .filter(Boolean)
-              .join('\n')
-          : typeof commonLyrics === 'string'
-            ? commonLyrics
-            : null;
-        if (lyricText) {
-          if (!cancelled) {
-            setLrcContent(lyricText);
-            setLyricsSource('Embedded');
-            setLyricsType('unsynced');
-          }
-          return;
-        }
-      } catch {
-        /* ignore */
-      }
-
-      if (!cancelled) {
-        setLrcContent(null);
-        setLyricsSource(null);
-        setLyricsType(null);
-      }
-    })();
+    resolveLyrics(songPath, state.track?.Id).then(found => {
+      if (cancelled) return;
+      setLrcContent(found?.content ?? null);
+      setLyricsSource(found?.source ?? null);
+      setLyricsType(found?.type ?? null);
+    });
     return () => {
       cancelled = true;
     };
-  }, [songPath, isRemoteSongPath, state.track?.Id]);
+  }, [songPath, state.track?.Id]);
 
   const handleLyricsToggle = useCallback(() => {
     dispatch({ type: 'SET_LYRICS_EXPANDED', payload: !isLyricsExpanded });
@@ -629,7 +503,8 @@ export default function PlayBar() {
     const deviceId = getAudioOutputDeviceId();
     for (const el of [audioRef.current, silentAudioRef.current]) {
       const sinkable = el as
-        (HTMLAudioElement & { setSinkId?: (_id: string) => Promise<void>; sinkId?: string }) | null;
+        | (HTMLAudioElement & { setSinkId?: (_id: string) => Promise<void>; sinkId?: string })
+        | null;
       if (!sinkable?.setSinkId || sinkable.sinkId === deviceId) continue;
       try {
         await sinkable.setSinkId(deviceId);

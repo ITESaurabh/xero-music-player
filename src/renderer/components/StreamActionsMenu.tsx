@@ -135,7 +135,19 @@ const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({
         </MenuItem>
       </Menu>
 
-      <AppDialog open={renameOpen} onClose={() => setRenameOpen(false)} title="Rename Stream">
+      <AppDialog
+        open={renameOpen}
+        onClose={() => setRenameOpen(false)}
+        title="Rename Stream"
+        actions={
+          <>
+            <Button onClick={() => setRenameOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={() => void handleRename()}>
+              Save
+            </Button>
+          </>
+        }
+      >
         <Stack spacing={2}>
           <TextField
             autoFocus
@@ -147,12 +159,6 @@ const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({
               if (e.key === 'Enter') void handleRename();
             }}
           />
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => void handleRename()}>
-              Save
-            </Button>
-          </Stack>
         </Stack>
       </AppDialog>
     </>

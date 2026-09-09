@@ -127,7 +127,31 @@ const FactoryResetDialog: React.FC<FactoryResetDialogProps> = ({ open, onClose }
   };
 
   return (
-    <AppDialog open={open} onClose={busy ? () => undefined : onClose} title="Factory Reset">
+    <AppDialog
+      open={open}
+      onClose={busy ? () => undefined : onClose}
+      title="Factory Reset"
+      actions={
+        <>
+          <Button onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          {failed.length > 0 && (
+            <Button color="warning" onClick={() => sendEventToMainProcess('restart-app')}>
+              Restart anyway
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            color="error"
+            disabled={busy || selected.size === 0}
+            onClick={handleReset}
+          >
+            {busy ? 'Resetting…' : 'Reset'}
+          </Button>
+        </>
+      }
+    >
       <Stack spacing={1}>
         <Typography variant="body2" color="text.secondary">
           Pick what to wipe. Music files on disk are never touched.
@@ -175,25 +199,6 @@ const FactoryResetDialog: React.FC<FactoryResetDialogProps> = ({ open, onClose }
             holds them.
           </Alert>
         )}
-
-        <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 1 }}>
-          <Button onClick={onClose} disabled={busy}>
-            Cancel
-          </Button>
-          {failed.length > 0 && (
-            <Button color="warning" onClick={() => sendEventToMainProcess('restart-app')}>
-              Restart anyway
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            color="error"
-            disabled={busy || selected.size === 0}
-            onClick={handleReset}
-          >
-            {busy ? 'Resetting…' : 'Reset'}
-          </Button>
-        </Stack>
       </Stack>
     </AppDialog>
   );

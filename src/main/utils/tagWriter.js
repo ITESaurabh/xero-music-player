@@ -76,6 +76,14 @@ function writeTags(filePath, fields) {
     if (fields.albumArtists !== undefined) tag.albumArtists = fields.albumArtists;
     if (fields.genres !== undefined) tag.genres = fields.genres;
     if (fields.comment !== undefined) tag.comment = fields.comment;
+    // Cross-format: USLT on ID3v2, LYRICS on Xiph, ©lyr on Apple. Lyric Studio
+    // writes LRC text here verbatim, and the reader treats a timestamped USLT as
+    // synced, so the timings survive the round trip.
+    //
+    // ponytail: SYLT is the correct ID3v2 frame for synced lyrics and some
+    // hardware players read only that. Move to Id3v2SynchronizedLyricsFrame if
+    // anyone reports a player ignoring the embedded timings.
+    if (fields.lyrics !== undefined) tag.lyrics = fields.lyrics;
     // 0 is taglib's "unset" for the numeric fields.
     if (fields.year !== undefined) tag.year = fields.year || 0;
     if (fields.disc !== undefined) tag.disc = fields.disc || 0;

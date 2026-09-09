@@ -13,9 +13,22 @@ const formatDuration = (value: number): string => {
   return `${minute}:${secondLeft < 10 ? `0${secondLeft}` : secondLeft}`;
 };
 
-const Root = styled(Box)({
-  width: '100%',
-});
+const Root = styled(Box, { shouldForwardProp: prop => prop !== 'inline' })<{ inline?: boolean }>(
+  ({ inline }) => ({
+    width: '100%',
+    ...(inline && {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      '& > .pp-track': { order: 2, flex: 1 },
+      '& > .pp-times': { display: 'contents' },
+      '& .pp-times > *:first-child': { order: 1 },
+      '& .pp-times > *:last-child': { order: 3 },
+      // Tabular figures so the bar does not shift as the digits tick over.
+      '& .pp-times > *': { flexShrink: 0, fontVariantNumeric: 'tabular-nums' },
+    }),
+  })
+);
 
 const TrackContainer = styled(Box, {
   shouldForwardProp: prop => prop !== 'isLive',
@@ -126,6 +139,8 @@ interface PlaybackProgressProps {
   /** Streamed from a server: it takes a moment to start and can run dry mid-track. */
   isRemote?: boolean;
   paused?: boolean;
+  /** Times either side of the bar rather than beneath it. */
+  inline?: boolean;
   onSeekCommit: (_pos: number) => void;
 }
 
@@ -138,6 +153,7 @@ const PlaybackProgress = React.memo(function PlaybackProgress({
   isLive,
   isRemote,
   paused,
+  inline,
   onSeekCommit,
 }: PlaybackProgressProps) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -316,8 +332,9 @@ const PlaybackProgress = React.memo(function PlaybackProgress({
   );
 
   return (
-    <Root>
+    <Root inline={inline}>
       <TrackContainer
+        className="pp-track"
         ref={trackRef}
         isLive={isLive}
         onPointerDown={handlePointerDown}
@@ -339,7 +356,7 @@ const PlaybackProgress = React.memo(function PlaybackProgress({
           </>
         )}
       </TrackContainer>
-      <TimeRow>
+      <TimeRow className="pp-times">
         <TimeText>
           <span ref={posTextRef}>0:00</span>
         </TimeText>

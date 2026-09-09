@@ -31,6 +31,7 @@ import AppIcon from 'svg-react-loader?name=AppIcon!../../img/logo.svg';
 import { Icon } from '@iconify/react';
 import { store } from '../utils/store';
 import { CAST_STOP_EVENT } from '../utils/LocStoreUtil';
+import { confirmNavigation } from '../utils/navGuard';
 import MainDrawer from './MainDrawer';
 import { TitleBarStyle } from '../../config/app_settings';
 import GnomeCloseIcon from 'svg-react-loader?name=GnomeCloseIcon!../../assets/icons/gnome-close.svg';
@@ -180,13 +181,18 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
 
   const canGoBack = navDepth > 0;
 
+  // Lyric Studio replaces the library navigation with a rail of its own and
+  // renders that into the same drawer, so the menu button there must not also
+  // open this one on top of it.
+  const inTakeover = location.pathname.startsWith('/lyric-studio');
+
   const toggleDrawer = () => {
     dispatch({ type: 'SET_MENU_EXPANDED', payload: !state.isMenuExpanded });
   };
 
   return (
     <>
-      {isPhone && !minimal && (
+      {isPhone && !minimal && !inTakeover && (
         <Drawer
           open={state.isMenuExpanded}
           PaperProps={{
@@ -240,7 +246,11 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
             {!minimal && (
               <Button
                 disabled={!canGoBack}
-                onClick={() => navigate(-1)}
+                // A screen holding unsaved work gets to object first.
+                onClick={async () => {
+                  if (await confirmNavigation()) navigate(-1);
+                }}
+                variant="text"
                 sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }}
                 size="small"
               >
@@ -250,6 +260,7 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
             {isPhone && !minimal && (
               <Button
                 onClick={toggleDrawer}
+                variant="text"
                 sx={{ minWidth: '2.5rem', borderRadius: '0.4rem' }}
                 size="small"
               >

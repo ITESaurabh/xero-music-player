@@ -201,7 +201,9 @@ const PlaylistDetail: React.FC = () => {
         format,
       })) as { success?: boolean; canceled?: boolean; error?: string; filePath?: string };
       if (res?.canceled) return;
-      setExportMessage(res?.success ? `Exported to ${res.filePath}` : res?.error || 'Export failed');
+      setExportMessage(
+        res?.success ? `Exported to ${res.filePath}` : res?.error || 'Export failed'
+      );
     },
     [invokeEventToMainProcess, id]
   );
@@ -248,7 +250,11 @@ const PlaylistDetail: React.FC = () => {
             <IconButton onClick={e => setMenuAnchor(e.currentTarget)}>
               <Icon icon={moreVerticalIcon} width={20} />
             </IconButton>
-            <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+            <Menu
+              anchorEl={menuAnchor}
+              open={Boolean(menuAnchor)}
+              onClose={() => setMenuAnchor(null)}
+            >
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
@@ -398,7 +404,12 @@ const PlaylistDetail: React.FC = () => {
                     )}
                     <Typography
                       variant="caption"
-                      sx={{ color: 'text.secondary', flexShrink: 0, minWidth: 40, textAlign: 'right' }}
+                      sx={{
+                        color: 'text.secondary',
+                        flexShrink: 0,
+                        minWidth: 40,
+                        textAlign: 'right',
+                      }}
                     >
                       {formatDuration(track.Duration)}
                     </Typography>
@@ -420,12 +431,29 @@ const PlaylistDetail: React.FC = () => {
       </Box>
 
       {editTracks && (
-        <TagEditorDialog open onClose={() => setEditTracks(null)} mode="track" tracks={editTracks} />
+        <TagEditorDialog
+          open
+          onClose={() => setEditTracks(null)}
+          mode="track"
+          tracks={editTracks}
+        />
       )}
 
       <AddTracksDialog open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAddTracks} />
 
-      <AppDialog open={renameOpen} onClose={() => setRenameOpen(false)} title="Rename Playlist">
+      <AppDialog
+        open={renameOpen}
+        onClose={() => setRenameOpen(false)}
+        title="Rename Playlist"
+        actions={
+          <>
+            <Button onClick={() => setRenameOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={() => void handleRename()}>
+              Save
+            </Button>
+          </>
+        }
+      >
         <Stack spacing={2}>
           <TextField
             autoFocus
@@ -437,21 +465,21 @@ const PlaylistDetail: React.FC = () => {
               if (e.key === 'Enter') void handleRename();
             }}
           />
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => void handleRename()}>
-              Save
-            </Button>
-          </Stack>
         </Stack>
       </AppDialog>
 
-      <AppDialog open={exportMessage !== null} onClose={() => setExportMessage(null)} title="Export">
+      <AppDialog
+        open={exportMessage !== null}
+        onClose={() => setExportMessage(null)}
+        title="Export"
+        actions={
+          <>
+            <Button onClick={() => setExportMessage(null)}>Close</Button>
+          </>
+        }
+      >
         <Stack spacing={1.5}>
           <Typography variant="body2">{exportMessage}</Typography>
-          <Stack direction="row" justifyContent="flex-end">
-            <Button onClick={() => setExportMessage(null)}>Close</Button>
-          </Stack>
         </Stack>
       </AppDialog>
     </Box>
