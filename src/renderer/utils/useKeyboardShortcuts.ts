@@ -70,7 +70,7 @@ const KEY_LABELS: Record<string, string> = {
   escape: 'Esc',
 };
 
-const CTRL_LABEL = navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl';
+const CTRL_LABEL = navigator.userAgent.includes('Mac') ? '⌃' : 'Ctrl';
 
 export type ShortcutKeys = Pick<KeyboardShortcut, 'key' | 'ctrl' | 'alt' | 'shift' | 'meta'>;
 
