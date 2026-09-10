@@ -27,7 +27,7 @@ import castFilledIcon from '@iconify/icons-fluent/cast-24-filled';
 import chevronDownIcon from '@iconify/icons-fluent/chevron-down-16-regular';
 import chevronUpIcon from '@iconify/icons-fluent/chevron-up-16-regular';
 import menuIcon from '@iconify/icons-fluent/line-horizontal-3-20-filled';
-import AppIcon from 'svg-react-loader?name=AppIcon!../../img/logo.svg';
+import AppIcon from 'svg-react-loader?name=AppIcon!../../assets/logo.svg';
 import { Icon } from '@iconify/react';
 import { store } from '../utils/store';
 import { CAST_STOP_EVENT } from '../utils/LocStoreUtil';
