@@ -39,6 +39,8 @@ import headphonesIcon from '@iconify/icons-fluent/headphones-20-regular';
 import speakerIcon from '@iconify/icons-fluent/speaker-2-24-regular';
 import syncIcon from '@iconify/icons-fluent/arrow-sync-24-regular';
 import zoomIcon from '@iconify/icons-fluent/zoom-in-24-regular';
+import accessibilityIcon from '@iconify/icons-fluent/accessibility-24-regular';
+import FloatingScrollbar from '../components/FloatingScrollbar';
 import streamIcon from '@iconify/icons-fluent/live-24-regular';
 import checkmarkCircleIcon from '@iconify/icons-fluent/checkmark-circle-16-filled';
 import windowHeaderIcon from '@iconify/icons-fluent/window-header-vertical-20-regular';
@@ -780,6 +782,7 @@ const Settings: React.FC = () => {
   const { invokeEventToMainProcess, sendEventToMainProcess } = useIpc();
   const confirm = useConfirm();
   const { state, dispatch } = useContext(store);
+  const settingsScrollRef = React.useRef<HTMLDivElement | null>(null);
   const { isScanningLibrary, scanMode } = state;
   const basicScanning = isScanningLibrary && scanMode === 'basic';
   const fullScanning = isScanningLibrary && scanMode === 'full';
@@ -996,7 +999,11 @@ const Settings: React.FC = () => {
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
     >
       <PageToolbar title="Settings" />
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+      <FloatingScrollbar targetRef={settingsScrollRef} />
+      <Box
+        ref={settingsScrollRef}
+        sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
+      >
         <Container maxWidth="xl">
           <List
             subheader={
@@ -1384,6 +1391,25 @@ const Settings: React.FC = () => {
                   </MenuItem>
                 ))}
               </Select>
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <Icon icon={accessibilityIcon} width={'2rem'} />
+              </ListItemIcon>
+              <ListItemText
+                id="switch-list-label-always-show-scrollbar"
+                primary="Always show scrollbars"
+                secondary="Keep the scrollbar on screen and expanded instead of letting it fade out when you stop scrolling"
+              />
+              <IOSSwitch
+                checked={state.alwaysShowScrollbar}
+                onChange={e =>
+                  dispatch({ type: 'SET_ALWAYS_SHOW_SCROLLBAR', payload: e.target.checked })
+                }
+                sx={{
+                  mr: 0.5,
+                }}
+              />
             </ListItem>
           </List>
           <List

@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
+import FloatingScrollbar from '../components/FloatingScrollbar';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Icon } from '@iconify/react';
 import streamIcon from '@iconify/icons-fluent/live-24-regular';
@@ -57,6 +58,7 @@ function heardAgo(at: number | null): string {
 
 const StreamDetail: React.FC = () => {
   const { streamId } = useParams();
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
   const id = Number(streamId);
   const { invokeEventToMainProcess } = useIpc();
   const { state, dispatch } = useContext(store);
@@ -250,12 +252,18 @@ const StreamDetail: React.FC = () => {
         </Stack>
 
         {tracks.length === 0 ? (
-          <Empty page={stream.Name} hint="Songs appear here while the station is playing." />
+          <Empty
+            compact
+            page={stream.Name}
+            hint="Songs appear here while the station is playing."
+          />
         ) : (
           <Box sx={{ flex: 1, minHeight: 0 }}>
+            <FloatingScrollbar targetRef={scrollerRef} />
             <AutoSizer>
               {({ height, width }: { height: number; width: number }) => (
                 <FixedSizeList
+                  outerRef={scrollerRef}
                   height={height}
                   width={width}
                   itemCount={tracks.length}

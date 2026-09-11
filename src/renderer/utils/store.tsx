@@ -9,6 +9,8 @@ import {
   setPlaybackRepeatMode,
   getTitleBarStyle,
   setTitleBarStyle,
+  getAlwaysShowScrollbar,
+  setAlwaysShowScrollbar,
   getActiveTheme,
   setActiveTheme,
 } from './LocStoreUtil';
@@ -126,6 +128,7 @@ export interface AppState {
   libraryStats: LibraryStats | null;
   queueSource: string | null;
   titleBarStyle: TitleBarStyle;
+  alwaysShowScrollbar: boolean;
   appTheme: AppTheme;
   isCasting: boolean;
   castDeviceName: string | null;
@@ -134,6 +137,7 @@ export interface AppState {
 export type AppAction =
   | { type: 'SET_THEME_MODE'; payload: ThemeMode }
   | { type: 'SET_TITLEBAR_STYLE'; payload: TitleBarStyle }
+  | { type: 'SET_ALWAYS_SHOW_SCROLLBAR'; payload: boolean }
   | { type: 'SET_APP_THEME'; payload: AppTheme }
   | { type: 'SET_IS_MAXIMIZED'; payload: boolean }
   | { type: 'SET_WINDOW_FOCUSED'; payload: boolean }
@@ -172,11 +176,13 @@ const initialState: AppState = (() => {
   let savedShuffle = false;
   let savedRepeat: RepeatMode = 'off';
   let savedTitleBarStyle: TitleBarStyle = 'default';
+  let savedAlwaysShowScrollbar = false;
   let savedAppTheme: AppTheme = AMETHYST;
   try {
     savedShuffle = getPlaybackShuffle();
     savedRepeat = getPlaybackRepeatMode();
     savedTitleBarStyle = getTitleBarStyle();
+    savedAlwaysShowScrollbar = getAlwaysShowScrollbar();
     savedAppTheme = getActiveTheme();
   } catch {
     /* settings unavailable — fall back to defaults */
@@ -207,6 +213,7 @@ const initialState: AppState = (() => {
     libraryStats: null,
     queueSource: saved?.queueSource ?? null,
     titleBarStyle: savedTitleBarStyle,
+    alwaysShowScrollbar: savedAlwaysShowScrollbar,
     appTheme: savedAppTheme,
     isCasting: false,
     castDeviceName: null,
@@ -234,6 +241,10 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'SET_TITLEBAR_STYLE': {
       setTitleBarStyle(action.payload);
       return { ...state, titleBarStyle: action.payload };
+    }
+    case 'SET_ALWAYS_SHOW_SCROLLBAR': {
+      setAlwaysShowScrollbar(action.payload);
+      return { ...state, alwaysShowScrollbar: action.payload };
     }
     case 'SET_APP_THEME': {
       setActiveTheme(action.payload.name);

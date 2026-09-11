@@ -271,7 +271,7 @@ const Favourites: React.FC = () => {
         }
       />
       <Container
-        maxWidth="xl"
+        maxWidth={false}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
         {songs.length === 0 ? (

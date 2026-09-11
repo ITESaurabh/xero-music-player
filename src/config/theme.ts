@@ -405,6 +405,19 @@ export const getBaseTheme = (mode: PaletteMode, theme: AppTheme = AMETHYST) => {
           '::-webkit-scrollbar-corner': {
             backgroundColor: 'transparent',
           },
+          // FloatingScrollbar draws its own rail; the native one would duplicate it
+          // and take a column of width. The bottom gutter lives here because this is
+          // the one selector every scrolling surface carries. A view's own `pb` wins:
+          // sx classes outrank the baseline.
+          '.xt-scroll-host': {
+            scrollbarWidth: 'none',
+            paddingBottom: 16,
+          },
+          '.xt-scroll-host::-webkit-scrollbar': {
+            display: 'none',
+            width: 0,
+            height: 0,
+          },
         },
       },
     },

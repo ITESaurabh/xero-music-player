@@ -11,6 +11,7 @@ import { useIpc } from '../state/ipc';
 import { QUERY_KEYS } from '../constants/queryKeys';
 import { store } from '../utils/store';
 import { useScrollHidePlayerBar } from '../utils/useScrollHidePlayerBar';
+import FloatingScrollbar from '../components/FloatingScrollbar';
 import { useScrollRestoration } from '../utils/useScrollRestoration';
 import { DEFAULT_AA } from '../../config/constants';
 
@@ -160,18 +161,12 @@ const Cell = React.memo(
 );
 Cell.displayName = 'Cell';
 
-// Overlay scrollbar so the scrollbar doesn't steal width from the grid,
-// keeping all columns fully visible without clipping the right edge.
 const ScrollContainer = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDivElement>>(
   ({ style, ...rest }, ref) => (
     <div
       {...rest}
       ref={ref}
-      style={{
-        ...style,
-        overflowY: 'overlay' as React.CSSProperties['overflowY'],
-        overflowX: 'hidden',
-      }}
+      style={{ ...style, overflowY: 'auto', overflowX: 'hidden' }}
     />
   )
 );
@@ -183,6 +178,7 @@ const Albums: React.FC = () => {
   const scrollHide = useScrollHidePlayerBar<{ scrollTop: number }>({ field: 'scrollTop' });
   const { initialScrollTop, saveScrollPosition } = useScrollRestoration('albums');
   const navigate = useNavigate();
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
 
   const handleGridScroll = React.useCallback(
     (args: { scrollTop: number }) => {
@@ -268,6 +264,7 @@ const Albums: React.FC = () => {
       <PageToolbar title={`Albums (${albums.length})`} />
 
       <Box sx={{ flex: 1, minHeight: 0, px: `${PADDING}px` }}>
+        <FloatingScrollbar targetRef={scrollerRef} />
         <AutoSizer onResize={handleResize}>
           {({ height, width }: { height: number; width: number }) => {
             const { colCount, colWidth, rowHeight } = calcLayout(width);
@@ -285,6 +282,7 @@ const Albums: React.FC = () => {
                 overscanRowCount={4}
                 onScroll={handleGridScroll}
                 itemData={itemData}
+                outerRef={scrollerRef}
                 outerElementType={ScrollContainer}
               >
                 {Cell}

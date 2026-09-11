@@ -20,6 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useScrollHidePlayerBar } from '../utils/useScrollHidePlayerBar';
 import { useScrollRestoration } from '../utils/useScrollRestoration';
+import FloatingScrollbar, { SCROLLBAR_RAIL } from '../components/FloatingScrollbar';
 import { GridSize, ViewMode } from '../../config/app_settings';
 import { getFolderViewSettings, setFolderViewSettings } from '../utils/LocStoreUtil';
 import { gridCardSx } from '../styles/listSx';
@@ -130,6 +131,7 @@ const Folders: React.FC = () => {
   const queryClient = useQueryClient();
   const scrollHide = useScrollHidePlayerBar();
   const { initialScrollOffset, saveScrollPosition } = useScrollRestoration('folders');
+  const gridScrollRef = React.useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -241,13 +243,18 @@ const Folders: React.FC = () => {
     >
       <PageToolbar title={`Folders (${folders.length})`} action={viewToggle} />
       <Container
-        maxWidth="xl"
+        maxWidth={false}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
         {folders.length === 0 ? (
           <Empty page="Folders" hint="Add a Music Folder in Settings to get started." />
         ) : viewMode === 'grid' ? (
-          <Box onScroll={handleGridScroll} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', py: 2 }}>
+          <Box
+            ref={gridScrollRef}
+            onScroll={handleGridScroll}
+            sx={{ flex: 1, minHeight: 0, overflowY: 'auto', py: 2, pr: `${SCROLLBAR_RAIL}px` }}
+          >
+            <FloatingScrollbar targetRef={gridScrollRef} />
             <Box
               sx={{
                 display: 'grid',

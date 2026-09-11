@@ -11,6 +11,8 @@ import { useIpc } from '../../state/ipc';
 import { QUERY_KEYS } from '../../constants/queryKeys';
 import { store } from '../../utils/store';
 import { useScrollHidePlayerBar } from '../../utils/useScrollHidePlayerBar';
+import FloatingScrollbar from '../../components/FloatingScrollbar';
+import { alphabetSections } from '../../utils/scrollSections';
 import { useScrollRestoration } from '../../utils/useScrollRestoration';
 
 export interface Artist {
@@ -151,11 +153,7 @@ const ScrollContainer = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDiv
     <div
       {...rest}
       ref={ref}
-      style={{
-        ...style,
-        overflowY: 'overlay' as React.CSSProperties['overflowY'],
-        overflowX: 'hidden',
-      }}
+      style={{ ...style, overflowY: 'auto', overflowX: 'hidden' }}
     />
   )
 );
@@ -172,6 +170,7 @@ const AllArtists: React.FC<AllArtistsProps> = ({ showAlbumsOnly = false }) => {
   const scrollHide = useScrollHidePlayerBar<{ scrollTop: number }>({ field: 'scrollTop' });
   const { initialScrollTop, saveScrollPosition } = useScrollRestoration(location.pathname);
   const navigate = useNavigate();
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
 
   const handleGridScroll = React.useCallback(
     (args: { scrollTop: number }) => {
@@ -233,6 +232,16 @@ const AllArtists: React.FC<AllArtistsProps> = ({ showAlbumsOnly = false }) => {
     [filtered, gridLayout, handleArtistClick]
   );
 
+  // The query hands artists back name-sorted, which is what makes an A-Z rail honest.
+  const sections = useMemo(
+    () =>
+      alphabetSections(
+        filtered.map(a => a.Name),
+        { rowHeight: gridLayout.rowHeight, colCount: gridLayout.colCount }
+      ),
+    [filtered, gridLayout]
+  );
+
   if (isLoading)
     return (
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -271,6 +280,7 @@ const AllArtists: React.FC<AllArtistsProps> = ({ showAlbumsOnly = false }) => {
     >
       <PageToolbar title={`${showAlbumsOnly ? 'Album Artists' : 'Artists'} (${filtered.length})`} />
       <Box sx={{ flex: 1, minHeight: 0, px: `${PADDING}px` }}>
+        <FloatingScrollbar targetRef={scrollerRef} sections={sections} />
         <AutoSizer onResize={handleResize}>
           {({ height, width }: { height: number; width: number }) => {
             const { colCount, colWidth, rowHeight } = calcLayout(width);
@@ -289,6 +299,7 @@ const AllArtists: React.FC<AllArtistsProps> = ({ showAlbumsOnly = false }) => {
                 overscanRowCount={4}
                 onScroll={handleGridScroll}
                 itemData={itemData}
+                outerRef={scrollerRef}
                 outerElementType={ScrollContainer}
               >
                 {Cell}

@@ -23,9 +23,14 @@ export interface EmptyProps {
   hint?: React.ReactNode;
   /** Action rendered under the hint. */
   children?: React.ReactNode;
+  /**
+   * For a section of a page rather than the whole of one: smaller Rei, tighter padding.
+   * Full size under a heading swallows the viewport and reads as a failed page load.
+   */
+  compact?: boolean;
 }
 
-function Empty({ page, hint, children }: EmptyProps) {
+function Empty({ page, hint, children, compact = false }: EmptyProps) {
   const tagline = useMemo(
     () => TAGLINES[Math.floor(Math.random() * TAGLINES.length)].replace('{page}', page),
     [page]
@@ -36,14 +41,20 @@ function Empty({ page, hint, children }: EmptyProps) {
       alignItems="center"
       justifyContent="center"
       spacing={1}
-      sx={{ flex: 1, minHeight: 0, p: 4, pb: 28, textAlign: 'center' }}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        p: compact ? 3 : 4,
+        pb: compact ? 8 : 28,
+        textAlign: 'center',
+      }}
     >
       <Box
         component="img"
         src={reiJudgy}
         alt=""
         sx={{
-          height: { xs: 220, sm: 320 },
+          height: compact ? { xs: 110, sm: 160 } : { xs: 220, sm: 320 },
           maxWidth: '100%',
           objectFit: 'contain',
           pointerEvents: 'none',
@@ -51,7 +62,7 @@ function Empty({ page, hint, children }: EmptyProps) {
           opacity: 0.9,
         }}
       />
-      <Typography variant="h6" sx={{ lineHeight: 1.3 }}>
+      <Typography variant={'h6'} sx={{ lineHeight: 1.3 }}>
         {tagline}
       </Typography>
       {hint && (

@@ -35,6 +35,7 @@ import { store, Track } from '../utils/store';
 import { QUERY_KEYS } from '../constants/queryKeys';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { VariableSizeList, ListChildComponentProps } from 'react-window';
+import FloatingScrollbar from './../components/FloatingScrollbar';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { motion } from 'motion/react';
 import { GridSize, ViewMode } from '../../config/app_settings';
@@ -322,6 +323,7 @@ const FolderHierarchy: React.FC = () => {
   const queryClient = useQueryClient();
   const currentPath = searchParams.get('path');
   const listRef = React.useRef<VariableSizeList | null>(null);
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
   const [bodyWidth, setBodyWidth] = useState(0);
 
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -739,10 +741,12 @@ const FolderHierarchy: React.FC = () => {
         )}
         {!isLoading && !error && rows.length > 0 && (
           <Box sx={{ flex: 1, minHeight: 0 }}>
+            <FloatingScrollbar targetRef={scrollerRef} />
             <AutoSizer onResize={handleResize}>
               {({ height, width }: { height: number; width: number }) => (
                 <VariableSizeList
                   ref={listRef}
+                  outerRef={scrollerRef}
                   height={height}
                   width={width}
                   itemCount={rows.length}

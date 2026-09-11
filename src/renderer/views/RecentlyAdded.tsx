@@ -196,7 +196,7 @@ const RecentlyAdded: React.FC = () => {
     >
       <PageToolbar title="Recently Added" />
       <Container
-        maxWidth="xl"
+        maxWidth={false}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
         <Collapse in={selected.length > 0} sx={{ flexShrink: 0 }}>

@@ -27,6 +27,7 @@ import { useIpc } from '../../state/ipc';
 import { store, Track } from '../../utils/store';
 import { QUERY_KEYS } from '../../constants/queryKeys';
 import { useScrollHidePlayerBar } from '../../utils/useScrollHidePlayerBar';
+import FloatingScrollbar from '../../components/FloatingScrollbar';
 import { useScrollRestoration } from '../../utils/useScrollRestoration';
 import { Icon } from '@iconify/react';
 import { artPlaceholderSx } from '../../styles/listSx';
@@ -561,6 +562,7 @@ const ArtistDetail: React.FC<ArtistDetailProps> = ({ showAlbumArtist = false }) 
         />
       </Collapse>
 
+      <FloatingScrollbar targetRef={scrollRef} />
       <Box
         ref={scrollRef}
         sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minWidth: 0 }}

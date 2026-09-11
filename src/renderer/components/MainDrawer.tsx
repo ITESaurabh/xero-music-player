@@ -19,6 +19,7 @@ import {
   tooltipClasses,
 } from '@mui/material';
 import SearchBar from './SearchBar';
+import FloatingScrollbar from './FloatingScrollbar';
 import { Link, useMatch, useResolvedPath } from 'react-router';
 import { IconifyIcon, Icon } from '@iconify/react';
 import musicNoteIcon from '@iconify/icons-fluent/music-note-2-24-regular';
@@ -178,6 +179,7 @@ const menuItems: MenuItem[] = [
 
 function MainDrawer({ tempDrawer }: MainDrawerProps) {
   const { state, dispatch } = useContext(store);
+  const navScrollRef = React.useRef<HTMLUListElement | null>(null);
   const { isScanningLibrary, isSyncing, scanMode, scanProgress, libraryStats, isMenuExpanded } =
     state;
   const libraryBusy = (isScanningLibrary && scanMode !== 'quick') || isSyncing;
@@ -210,7 +212,9 @@ function MainDrawer({ tempDrawer }: MainDrawerProps) {
         transition: state.isWindowFocused ? 'opacity 0.05s ease-out' : 'opacity 0.3s ease-out',
       }}
     >
+      <FloatingScrollbar targetRef={navScrollRef} />
       <List
+        ref={navScrollRef}
         sx={{
           width: '100%',
           position: 'relative',

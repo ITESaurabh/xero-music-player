@@ -28,6 +28,8 @@ export interface ThemeSettings {
   paletteVariant: ThemePaletteVariant;
   activeTheme: string;
   customThemes: AppTheme[];
+  /** Accessibility: keep the overlay scrollbar on screen instead of auto-hiding it. */
+  alwaysShowScrollbar: boolean;
 }
 
 export interface PlaybackSettings {
@@ -111,6 +113,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     paletteVariant: 'default',
     activeTheme: AMETHYST.name,
     customThemes: [],
+    alwaysShowScrollbar: false,
   },
   playback: {
     volumeLevel: 30,

@@ -359,6 +359,14 @@ export function setWindowScale(scale: number): number {
   return safe;
 }
 
+export function getAlwaysShowScrollbar(): boolean {
+  return getSettings().theme.alwaysShowScrollbar;
+}
+
+export function setAlwaysShowScrollbar(enabled: boolean): boolean {
+  return setThemeSettings({ alwaysShowScrollbar: enabled }).alwaysShowScrollbar;
+}
+
 export function getTitleBarStyle(): TitleBarStyle {
   return getSettings().theme.titleBarStyle;
 }

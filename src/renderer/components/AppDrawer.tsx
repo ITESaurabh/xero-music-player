@@ -24,6 +24,7 @@ const AppDrawer = styled(MuiDrawer, { shouldForwardProp: prop => prop !== 'open'
     '& .MuiDrawer-paper': {
       position: 'relative',
       whiteSpace: 'nowrap',
+      overflow: 'hidden',
       width: DRAWER_WIDTH,
       transition: theme.transitions.create('width', {
         easing: theme.transitions.easing.sharp,

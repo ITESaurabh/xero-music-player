@@ -20,6 +20,7 @@ import { store, Track } from '../utils/store';
 import { QUERY_KEYS } from '../constants/queryKeys';
 import { useScrollHidePlayerBar } from '../utils/useScrollHidePlayerBar';
 import { useScrollRestoration } from '../utils/useScrollRestoration';
+import FloatingScrollbar from '../components/FloatingScrollbar';
 import { Icon } from '@iconify/react';
 import edit24Regular from '@iconify/icons-fluent/edit-24-regular';
 import ImagePreviewDialog from '../components/ImagePreviewDialog';
@@ -66,6 +67,7 @@ const AlbumDetail: React.FC = () => {
   const theme = useTheme();
   const { initialScrollOffset, saveScrollPosition } = useScrollRestoration(location.pathname);
   const listRef = React.useRef<FixedSizeList | null>(null);
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
 
   const {
     data: songs = [] as AlbumSong[],
@@ -434,6 +436,7 @@ const AlbumDetail: React.FC = () => {
             {({ height, width }: { height: number; width: number }) => (
               <FixedSizeList
                 ref={listRef}
+                outerRef={scrollerRef}
                 height={height}
                 width={width}
                 itemCount={songs.length}
@@ -447,6 +450,7 @@ const AlbumDetail: React.FC = () => {
             )}
           </AutoSizer>
         )}
+        <FloatingScrollbar targetRef={scrollerRef} />
       </Box>
 
       {selectionEditor && (

@@ -203,7 +203,7 @@ const YearDetail: React.FC = () => {
       </Box>
 
       <Container
-        maxWidth="xl"
+        maxWidth={false}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, mt: 2 }}
       >
         {isLoading ? (

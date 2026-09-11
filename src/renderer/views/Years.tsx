@@ -109,7 +109,7 @@ const Years: React.FC = () => {
     >
       <PageToolbar title={`Years (${years.length})`} />
       <Container
-        maxWidth="xl"
+        maxWidth={false}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
         {years.length === 0 ? (

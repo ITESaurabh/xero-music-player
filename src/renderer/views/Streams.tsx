@@ -18,6 +18,7 @@ import addIcon from '@iconify/icons-fluent/add-24-regular';
 import arrowImportIcon from '@iconify/icons-fluent/arrow-import-24-regular';
 import playIcon from '@iconify/icons-fluent/play-24-filled';
 import PageToolbar from '../components/PageToolbar';
+import FloatingScrollbar from '../components/FloatingScrollbar';
 import Empty from '../components/Empty';
 import AppDialog from '../components/AppDialog';
 import StreamActionsMenu from '../components/StreamActionsMenu';
@@ -57,6 +58,7 @@ const Streams: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const scrollHide = useScrollHidePlayerBar<{ scrollTop: number }>({ field: 'scrollTop' });
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
   const {
     data: streams = [] as StreamRow[],
@@ -181,6 +183,7 @@ const Streams: React.FC = () => {
       />
 
       <Box
+        ref={scrollRef}
         onScroll={e => scrollHide({ scrollTop: e.currentTarget.scrollTop })}
         sx={{ flex: 1, minHeight: 0, overflow: 'auto', px: 2, pb: 2 }}
       >
@@ -301,6 +304,7 @@ const Streams: React.FC = () => {
           <Alert severity={report?.success ? 'success' : 'error'}>{report?.message}</Alert>
         </Stack>
       </AppDialog>
+      <FloatingScrollbar targetRef={scrollRef} />
     </Box>
   );
 };

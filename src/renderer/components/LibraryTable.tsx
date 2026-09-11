@@ -9,6 +9,7 @@ import {
 } from '@mui/x-data-grid';
 import { createPortal } from 'react-dom';
 import LibraryToolbar from './LibraryToolbar';
+import FloatingScrollbar, { SCROLLBAR_RAIL } from './FloatingScrollbar';
 import { TABLE_ACTIONS_SLOT_ID } from './PageToolbar';
 import {
   matchesFilter,
@@ -188,6 +189,9 @@ const GRID_SX: SxProps<Theme> = {
     & .MuiDataGrid-scrollbarFiller`]: {
     bgcolor: theme => theme.palette.surfaces.listHeader,
   },
+  // v8 shows a separate proxy scrollbar div, not the virtual scroller's own.
+  // FloatingScrollbar drives the real scroller, so the proxy would be a second thumb.
+  '& .MuiDataGrid-scrollbar': { display: 'none' },
   '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 500 },
   '& .MuiDataGrid-columnSeparator': {
     color: theme => alpha(theme.palette.text.primary, 0.12),
@@ -204,6 +208,12 @@ const GRID_SX: SxProps<Theme> = {
     outline: 'none',
   },
   '& .MuiDataGrid-row': { cursor: 'pointer' },
+  // Rows end where the data does, so the banding is the table's bottom edge. One
+  // page holds every row, so `lastVisible` is the final row, not the last virtualised.
+  '& .MuiDataGrid-row--lastVisible': {
+    borderBottomLeftRadius: (theme: Theme) => `${theme.shape.borderRadius}px`,
+    borderBottomRightRadius: (theme: Theme) => `${theme.shape.borderRadius}px`,
+  },
   '& .xt-row--striped': { bgcolor: theme => alpha(theme.palette.text.primary, 0.03) },
   '& .MuiDataGrid-row:hover, & .xt-row--striped:hover': {
     bgcolor: theme => alpha(theme.palette.text.primary, 0.08),
@@ -404,6 +414,16 @@ export default function LibraryTable<T>({
     };
   }, [onRowHover, onRowContextMenu, rowAt]);
 
+  // The grid owns its scroller; it exists only once there are rows.
+  const hostRef = React.useRef<HTMLDivElement | null>(null);
+  const scrollerRef = React.useRef<HTMLElement | null>(null);
+  const [scrollerFound, setScrollerFound] = useState(false);
+  useEffect(() => {
+    scrollerRef.current =
+      hostRef.current?.querySelector<HTMLElement>('.MuiDataGrid-virtualScroller') ?? null;
+    setScrollerFound(!!scrollerRef.current);
+  }, [rows.length]);
+
   const toolbar = (
     <LibraryToolbar
       columns={columns}
@@ -424,9 +444,13 @@ export default function LibraryTable<T>({
   return (
     <>
       {actionsSlot ? createPortal(toolbar, actionsSlot) : null}
-      <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Box ref={hostRef} sx={{ flex: 1, minHeight: 0, pr: `${SCROLLBAR_RAIL}px` }}>
+        {scrollerFound && (
+          <FloatingScrollbar targetRef={scrollerRef} hostRef={hostRef} outside />
+        )}
         <DataGrid
           apiRef={apiRef}
+          scrollbarSize={0}
           rows={rows as readonly Record<string, unknown>[]}
           columns={gridColumns}
           getRowId={row => getRowId(row as T)}

@@ -110,7 +110,7 @@ const Genres: React.FC = () => {
     >
       <PageToolbar title={`Genres (${genres.length})`} />
       <Container
-        maxWidth="xl"
+        maxWidth={false}
         sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
         {genres.length === 0 ? (
