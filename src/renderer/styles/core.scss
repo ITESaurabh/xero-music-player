@@ -107,6 +107,8 @@ main {
   user-select: none;
   -webkit-user-select: none;
   -webkit-app-region: drag;
+  // The macOS traffic-light inset drops to 0 in full screen.
+  transition: padding-left 0.3s ease;
   &_windows {
     justify-content: start;
   }

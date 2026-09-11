@@ -157,7 +157,11 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
   const gnomeCircleBg = gnomeCircleBgFor(theme);
   const gnomeIconFilter = gnomeIconFilterFor(theme);
 
-  const hasRightControls = effectiveStyle === 'windows' || effectiveStyle === 'linux-kde';
+  // Full screen has nothing to drag or close, and macOS hides the traffic lights.
+  const chromeless = state.isFullScreen;
+  const showControls = !chromeless;
+  const hasRightControls =
+    showControls && (effectiveStyle === 'windows' || effectiveStyle === 'linux-kde');
 
   const inactiveChromeSx = {
     opacity: state.isWindowFocused ? 1 : 0.75,
@@ -218,12 +222,13 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
         sx={{
           bgcolor: 'background.default',
           height: '32px',
-          pl: effectiveStyle === 'mac' ? 8.5 : 0,
+          pl: effectiveStyle === 'mac' && !chromeless ? 8.5 : 0,
+          ...(chromeless && { '-webkit-app-region': 'no-drag' }),
         }}
       >
         <div className="tb-controls">
           {/* macOS fake traffic lights */}
-          {effectiveStyle === 'mac-fake' && (
+          {showControls && effectiveStyle === 'mac-fake' && (
             <div className="traffic-light" style={inactiveChromeSx}>
               <div onClick={() => sendMessageToNode('closeWindow', null)} className="close-unix">
                 close
@@ -327,7 +332,7 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
         )}
 
         {/* Windows style controls */}
-        {effectiveStyle === 'windows' && (
+        {showControls && effectiveStyle === 'windows' && (
           <Box sx={{ '-webkit-app-region': 'no-drag', height: '100%', ...inactiveChromeSx }}>
             <NavButtons onClick={() => sendMessageToNode('minimize', null)}>
               <Icon icon={minimizeIcon} />
@@ -341,7 +346,7 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
           </Box>
         )}
         {/* GNOME style controls — dark circles with always-visible icons */}
-        {effectiveStyle === 'linux-gnome' && (
+        {showControls && effectiveStyle === 'linux-gnome' && (
           <Box
             sx={{
               display: 'flex',
@@ -389,7 +394,7 @@ const Titlebar = memo(({ minimal = false }: TitlebarProps) => {
           </Box>
         )}
         {/* KDE Plasma Breeze style — compact flat buttons, chevron icons */}
-        {effectiveStyle === 'linux-kde' && (
+        {showControls && effectiveStyle === 'linux-kde' && (
           <Box
             sx={{
               display: 'flex',

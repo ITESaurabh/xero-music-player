@@ -121,6 +121,22 @@ export const IpcProvider = ({ children, mini = false }: IpcProviderProps) => {
 
   useEffect(() => {
     if (mini) return;
+    const handleFullScreen = (_event: Electron.IpcRendererEvent, arg: boolean) =>
+      dispatch({ type: 'SET_IS_FULLSCREEN', payload: arg });
+    ipcRenderer.on('fullscreen-state', handleFullScreen);
+    ipcRenderer
+      .invoke('get-fullscreen-state')
+      .then((full: boolean) => dispatch({ type: 'SET_IS_FULLSCREEN', payload: full }))
+      .catch(() => {
+        /* no handler in this process; keep the default */
+      });
+    return () => {
+      ipcRenderer.removeListener('fullscreen-state', handleFullScreen);
+    };
+  }, [mini, dispatch]);
+
+  useEffect(() => {
+    if (mini) return;
     const handleScanStart = (_event: Electron.IpcRendererEvent, mode?: ScanMode) => {
       dispatch({
         type: 'SET_SCANNING',

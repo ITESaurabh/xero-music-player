@@ -106,6 +106,7 @@ export interface LibraryStats {
 export interface AppState {
   isLightTheme: boolean;
   isMaximized: boolean;
+  isFullScreen: boolean;
   isWindowFocused: boolean;
   isMenuExpanded: boolean;
   path: string | null;
@@ -140,6 +141,7 @@ export type AppAction =
   | { type: 'SET_ALWAYS_SHOW_SCROLLBAR'; payload: boolean }
   | { type: 'SET_APP_THEME'; payload: AppTheme }
   | { type: 'SET_IS_MAXIMIZED'; payload: boolean }
+  | { type: 'SET_IS_FULLSCREEN'; payload: boolean }
   | { type: 'SET_WINDOW_FOCUSED'; payload: boolean }
   | { type: 'SET_SEARCH_ENABLED'; payload: boolean }
   | { type: 'SET_MENU_EXPANDED'; payload: boolean }
@@ -192,6 +194,7 @@ const initialState: AppState = (() => {
   return {
     isLightTheme: true,
     isMaximized: false,
+    isFullScreen: false,
     isWindowFocused: typeof document !== 'undefined' ? document.hasFocus() : true,
     isMenuExpanded: typeof window !== 'undefined' ? window.innerWidth >= 960 : true,
     path: null,
@@ -252,6 +255,10 @@ function reducer(state: AppState, action: AppAction): AppState {
     }
     case 'SET_IS_MAXIMIZED': {
       return { ...state, isMaximized: action.payload };
+    }
+    case 'SET_IS_FULLSCREEN': {
+      if (state.isFullScreen === action.payload) return state;
+      return { ...state, isFullScreen: action.payload };
     }
     case 'SET_WINDOW_FOCUSED': {
       if (state.isWindowFocused === action.payload) return state;
