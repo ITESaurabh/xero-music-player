@@ -616,10 +616,12 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   });
   // On macOS these fire after the zoom animation, and that is the right time:
   // the page is not repainted mid-zoom, so an earlier update pops instead of sliding.
-  const sendFullScreenState = () =>
-    sendMessageToRendererProcess(mainWin, 'fullscreen-state', mainWin.isFullScreen());
-  mainWin.on('enter-full-screen', sendFullScreenState);
-  mainWin.on('leave-full-screen', sendFullScreenState);
+  // Windows emits these before the native flag flips, so isFullScreen() would
+  // report the previous state here; the event itself already says which.
+  const sendFullScreenState = (full: boolean) => () =>
+    sendMessageToRendererProcess(mainWin, 'fullscreen-state', full);
+  mainWin.on('enter-full-screen', sendFullScreenState(true));
+  mainWin.on('leave-full-screen', sendFullScreenState(false));
   ipcMain.handle('get-fullscreen-state', () => mainWin.isFullScreen());
   ipcMain.on('closeWindow', () => {
     mainWin.close();
