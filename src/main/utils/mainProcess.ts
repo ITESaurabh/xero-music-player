@@ -459,10 +459,28 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   // Set while the close prompt is up, so hammering the X can't stack dialogs.
   let askingBeforeClose = false;
 
+  // Set by Cmd+Q, the dock's Quit and shutdown; the X alone never sets it.
+  let quitting = false;
+  app.on('before-quit', () => {
+    quitting = true;
+  });
+
   // A sync or a scan writes rows as it goes, so closing mid-way leaves the
   // library half built. The prompt is a system dialog because it has to outlive
   // the window the user is closing.
   mainWin.on('close', event => {
+    // The IPC handlers below are bound to this window and cannot be registered
+    // twice, so a destroyed window cannot be recreated; hide, as Cmd+W does.
+    if (process.platform === 'darwin' && !quitting) {
+      event.preventDefault();
+      if (mainWin.isFullScreen()) {
+        mainWin.once('leave-full-screen', () => mainWin.hide());
+        mainWin.setFullScreen(false);
+      } else {
+        mainWin.hide();
+      }
+      return;
+    }
     const busy = isSyncing() ? 'sync' : activeScanWorker ? 'scan' : null;
     if (busy) {
       event.preventDefault();
@@ -489,18 +507,26 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
         })
         .then(({ response }) => {
           askingBeforeClose = false;
-          if (response !== 1) return;
+          if (response !== 1) {
+            // The abandoned quit must not turn the next X into a real close.
+            quitting = false;
+            return;
+          }
           if (busy === 'sync') cancelSync();
           else activeScanWorker?.kill();
-          // Neither stops instantly; wait it out.
+          // Neither stops instantly; wait it out. preventDefault already abandoned
+          // the quit, so restart it rather than close the window.
           const closeWhenIdle = setInterval(() => {
             if (isSyncing() || activeScanWorker) return;
             clearInterval(closeWhenIdle);
-            if (!mainWin.isDestroyed()) mainWin.close();
+            if (mainWin.isDestroyed()) return;
+            if (quitting) app.quit();
+            else mainWin.close();
           }, 200);
         })
         .catch(() => {
           askingBeforeClose = false;
+          quitting = false;
         });
       return;
     }
@@ -1164,6 +1190,11 @@ export default function mainIpcs(mainWin, overlayEntry: string) {
   mainWin.webContents.on('before-input-event', (event, input) => {
     if ((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') {
       mainWin.webContents.openDevTools();
+      event.preventDefault();
+    }
+    // macOS has the system Ctrl+Cmd+F and the View menu item instead.
+    if (process.platform !== 'darwin' && input.key === 'F11' && input.type === 'keyDown') {
+      mainWin.setFullScreen(!mainWin.isFullScreen());
       event.preventDefault();
     }
   });
